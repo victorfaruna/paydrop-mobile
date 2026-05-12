@@ -1,4 +1,5 @@
 import { useAppState } from "@/store/appState";
+import { useUserStore } from "@/store/userStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -8,9 +9,16 @@ export default function DisplayNameScreen() {
   const router = useRouter();
   const [displayName, setDisplayName] = useState("");
   const { setOnboardingCompleted } = useAppState();
+  const user = useUserStore((state) => state.user);
+  const setUser = useUserStore((state) => state.setUser);
 
   const handleContinue = () => {
     if (displayName.trim()) {
+      setUser({
+        ...user,
+        displayName,
+        name: displayName,
+      });
       setOnboardingCompleted(true);
       router.replace("/(tabs)/home");
     }
