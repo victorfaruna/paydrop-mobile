@@ -1,20 +1,22 @@
 import { useUserStore } from "@/store/userStore";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
-import * as Clipboard from "expo-clipboard";
+// import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
-  Platform,
+  Modal,
   RefreshControl,
   ScrollView,
+  Share,
   Text,
-  ToastAndroid,
   TouchableOpacity,
   View,
 } from "react-native";
+import QRCode from "react-native-qrcode-svg";
 
 const BASE_URL = "https://pay-drop-backend.vercel.app";
 const DEVICE_ID = "paydrop-mobile-app";
@@ -186,18 +188,99 @@ export default function HomeScreen() {
   }, [accessToken]);
 
   const [copied, setCopied] = useState(false);
+  const [qrVisible, setQrVisible] = useState(false);
+  const [qrPayload, setQrPayload] = useState("");
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrRefreshing, setQrRefreshing] = useState(false);
+  const [qrTTL, setQrTTL] = useState<number | null>(null);
 
-  const handleCopyAccountNumber = async () => {
-    const account = user?.squad_virtual_account;
-    if (!account) return;
-    await Clipboard.setStringAsync(account);
-    if (Platform.OS === "android") {
-      ToastAndroid.show("Copied!", ToastAndroid.SHORT);
-    } else {
-      Alert.alert("Copied!", "Account number copied to clipboard.");
+  // const handleCopyAccountNumber = async () => {
+  //   const account = user?.squad_virtual_account;
+  //   if (!account) return;
+  //   await Clipboard.setStringAsync(account);
+  //   if (Platform.OS === "android") {
+  //     ToastAndroid.show("Copied!", ToastAndroid.SHORT);
+  //   } else {
+  //     Alert.alert("Copied!", "Account number copied to clipboard.");
+  //   }
+  //   setCopied(true);
+  //   setTimeout(() => setCopied(false), 1500);
+  // };
+
+  const fetchQrCode = async (isRefresh = false) => {
+    if (!isRefresh) {
+      setQrLoading(true);
     }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+
+    try {
+      const response = await axios.get(`${BASE_URL}/api/v1/discover/qr`, {
+        headers: {
+          "x-device-id": DEVICE_ID,
+          Authorization: accessToken ? `Bearer ${accessToken}` : undefined,
+        },
+      });
+
+      const payload =
+        response.data?.qr ||
+        response.data?.token ||
+        response.data?.payload ||
+        "";
+      const ttl =
+        typeof response.data?.ttl === "number"
+          ? response.data.ttl
+          : typeof response.data?.expires_in === "number"
+            ? response.data.expires_in
+            : 60;
+
+      setQrPayload(payload);
+      setQrTTL(ttl);
+    } catch (error) {
+      console.error("QR fetch error", error);
+      Alert.alert("Unable to load QR code", "Please try again.");
+    } finally {
+      if (!isRefresh) {
+        setQrLoading(false);
+      }
+      setQrRefreshing(false);
+    }
+  };
+
+  const refreshQrCode = async () => {
+    if (qrLoading || qrRefreshing) return;
+    setQrRefreshing(true);
+    await fetchQrCode(true);
+  };
+
+  useEffect(() => {
+    if (!qrVisible) return;
+    fetchQrCode();
+  }, [qrVisible]);
+
+  useEffect(() => {
+    if (!qrVisible) return;
+    const interval = setInterval(() => {
+      setQrTTL((prev) => (prev !== null ? Math.max(prev - 1, 0) : null));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [qrVisible]);
+
+  useEffect(() => {
+    if (qrVisible && qrTTL !== null && qrTTL <= 30 && !qrRefreshing) {
+      refreshQrCode();
+    }
+  }, [qrVisible, qrTTL, qrRefreshing]);
+
+  const handleShareQr = async () => {
+    if (!qrPayload) return;
+
+    try {
+      await Share.share({
+        message: `Pay me on PayDrop: ${qrPayload}`,
+      });
+    } catch (error) {
+      console.error("Share error", error);
+    }
   };
 
   const handleRefresh = async () => {
@@ -214,131 +297,205 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScrollView
-      className="flex-1 bg-white"
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          tintColor="#7C3AED"
-          colors={["#7C3AED"]}
-        />
-      }
-    >
-      <View className="bg-purple-500 rounded-b-[40px] pt-16 pb-8 px-6">
-        <View className="flex-row justify-between items-center mb-8">
-          <View className="w-10 h-10 rounded-full bg-purple-400 items-center justify-center overflow-hidden">
-            <Image
-              source={{ uri: user?.avatar_url ?? "https://i.pravatar.cc/100" }}
-              className="w-full h-full"
+    <>
+      <Modal visible={qrVisible} animationType="slide" transparent>
+        <View className="flex-1 bg-black/60 items-center justify-center px-6">
+          <View className="w-full rounded-[30px] bg-white p-6 shadow-lg">
+            <View className="flex-row items-center justify-between mb-6">
+              <View className="flex-1 items-center">
+                <Text className="text-[#1A1A1A] font-clash-bold text-[20px]">
+                  Your QR Code
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setQrVisible(false)}
+                className="p-2"
+              >
+                <Ionicons name="close" size={24} color="#1A1A1A" />
+              </TouchableOpacity>
+            </View>
+
+            <View className="rounded-[20px] bg-white px-6 py-6 items-center justify-center">
+              {qrLoading ? (
+                <ActivityIndicator size="large" color="#1A1A1A" />
+              ) : qrPayload ? (
+                <QRCode
+                  value={qrPayload}
+                  size={240}
+                  backgroundColor="white"
+                  color="black"
+                />
+              ) : (
+                <Text className="text-grey-500 text-center">
+                  Unable to load QR code.
+                </Text>
+              )}
+            </View>
+
+            <View className="items-center mt-6">
+              <Image
+                source={{
+                  uri: user?.avatar_url ?? "https://i.pravatar.cc/100",
+                }}
+                className="h-12 w-12 rounded-full"
+              />
+              <Text className="mt-4 text-[#1A1A1A] font-clash-bold text-[16px]">
+                {user?.first_name} {user?.last_name}
+              </Text>
+              <Text className="text-grey-500 font-clash-regular text-[14px]">
+                @{(user?.first_name ?? "user").toLowerCase()}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={handleShareQr}
+              className="mt-6 h-12 w-full items-center justify-center rounded-full bg-[#F3F4F6]"
+            >
+              <Text className="text-[#111827] font-clash-medium text-base">
+                Share
+              </Text>
+            </TouchableOpacity>
+
+            {qrRefreshing ? (
+              <Text className="mt-3 text-center text-grey-400 text-sm">
+                Refreshing…
+              </Text>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
+
+      <ScrollView
+        className="flex-1 bg-white"
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#7C3AED"
+            colors={["#7C3AED"]}
+          />
+        }
+      >
+        <View className="bg-purple-500 rounded-b-[40px] pt-16 pb-8 px-6">
+          <View className="flex-row justify-between items-center mb-8">
+            <TouchableOpacity
+              className="w-10 h-10 rounded-full bg-purple-400 items-center justify-center"
+              onPress={() => setQrVisible(true)}
+            >
+              <Ionicons name="qr-code-outline" size={24} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push("./notifications")}>
+              <Ionicons name="notifications-outline" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+
+          <View className="items-center mb-8">
+            <Text className="text-purple-200 font-clash-regular text-sm mb-1">
+              Wallet Balance
+            </Text>
+            <View className="flex-row items-baseline">
+              <Text className="text-white font-clash-bold text-4xl">
+                {formatNaira(walletBalance)}
+              </Text>
+            </View>
+            <View className="bg-purple-600 px-4 py-1.5 rounded-full mt-4">
+              <Text className="text-white font-clash-medium text-sm">
+                {user?.squad_virtual_account
+                  ? "Account linked"
+                  : "No account linked"}
+              </Text>
+            </View>
+          </View>
+
+          <View className="flex-row justify-between mb-6 px-1">
+            <ActionItem
+              icon="send-outline"
+              label="Send money"
+              onPress={() => router.push("/home/nearby")}
             />
+            <ActionItem
+              icon="add-outline"
+              label="Add money"
+              onPress={() => router.push("/home/topup")}
+            />
+            {/* <ActionItem
+            icon="people-outline"
+            label="Nearby"
+            onPress={() => router.push("/home/nearby")}
+          /> */}
           </View>
-          <TouchableOpacity onPress={() => router.push("./notifications")}>
-            <Ionicons name="notifications-outline" size={24} color="white" />
+
+          <TouchableOpacity
+            // onPress={handleCopyAccountNumber}
+            className="bg-white/10 rounded-3xl px-4 py-5"
+          >
+            <Text className="text-purple-100 font-clash-medium text-sm mb-2">
+              Virtual account
+            </Text>
+            <Text className="text-white font-clash-semibold text-base">
+              {user?.squad_virtual_account ?? "0123456789"}
+            </Text>
+            <Text className="text-purple-200 font-clash-regular text-xs mt-1">
+              {user?.squad_bank_code
+                ? `GTBank • ${user.squad_bank_code}`
+                : "GTBank"}
+            </Text>
+            {copied ? (
+              <Text className="text-green-200 font-clash-medium text-xs mt-3">
+                Copied!
+              </Text>
+            ) : null}
           </TouchableOpacity>
         </View>
 
-        <View className="items-center mb-8">
-          <Text className="text-purple-200 font-clash-regular text-sm mb-1">
-            Wallet Balance
-          </Text>
-          <View className="flex-row items-baseline">
-            <Text className="text-white font-clash-bold text-4xl">
-              {formatNaira(walletBalance)}
-            </Text>
-          </View>
-          <View className="bg-purple-600 px-4 py-1.5 rounded-full mt-4">
-            <Text className="text-white font-clash-medium text-sm">
-              {user?.squad_virtual_account
-                ? "Account linked"
-                : "No account linked"}
-            </Text>
-          </View>
-        </View>
-
-        <View className="flex-row justify-between mb-6 px-1">
-          <ActionItem
-            icon="send-outline"
-            label="Send money"
-            onPress={() => router.push("/transfer")}
-          />
-          <ActionItem
-            icon="add-outline"
-            label="Add money"
-            onPress={() => router.push("/home/topup")}
-          />
-        </View>
-
-        <TouchableOpacity
-          onPress={handleCopyAccountNumber}
-          className="bg-white/10 rounded-3xl px-4 py-5"
-        >
-          <Text className="text-purple-100 font-clash-medium text-sm mb-2">
-            Virtual account
-          </Text>
-          <Text className="text-white font-clash-semibold text-base">
-            {user?.squad_virtual_account ?? "0123456789"}
-          </Text>
-          <Text className="text-purple-200 font-clash-regular text-xs mt-1">
-            {user?.squad_bank_code
-              ? `GTBank • ${user.squad_bank_code}`
-              : "GTBank"}
-          </Text>
-          {copied ? (
-            <Text className="text-green-200 font-clash-medium text-xs mt-3">
-              Copied!
-            </Text>
-          ) : null}
-        </TouchableOpacity>
-      </View>
-
-      <View className="px-6 mt-8">
-        <TouchableOpacity className="bg-grey-50 rounded-3xl p-5 flex-row items-center border border-grey-100 mb-6">
-          <View className="w-12 h-12 bg-orange-100 rounded-2xl items-center justify-center mr-4">
-            <Ionicons name="sparkles-outline" size={24} color="#F97316" />
-          </View>
-          <View className="flex-1">
-            <Text className="text-black font-clash-semibold text-base">
-              Stay on top of payments
-            </Text>
-            <Text className="text-grey-500 font-clash-regular text-xs mt-0.5">
-              Review recent Naira transactions here.
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-        </TouchableOpacity>
-
-        <View className="flex-row justify-between items-center mb-6">
-          <Text className="text-xl font-clash-semibold text-black">
-            Recent transactions
-          </Text>
-          <TouchableOpacity onPress={() => router.push("/home/transactions")}>
-            <Text className="text-grey-400 font-clash-medium text-sm">
-              See all
-            </Text>
+        <View className="px-6 mt-8">
+          <TouchableOpacity className="bg-grey-50 rounded-3xl p-5 flex-row items-center border border-grey-100 mb-6">
+            <View className="w-12 h-12 bg-orange-100 rounded-2xl items-center justify-center mr-4">
+              <Ionicons name="sparkles-outline" size={24} color="#F97316" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-black font-clash-semibold text-base">
+                Stay on top of payments
+              </Text>
+              <Text className="text-grey-500 font-clash-regular text-xs mt-0.5">
+                Review recent Naira transactions here.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </TouchableOpacity>
-        </View>
 
-        {loading && !refreshing ? (
-          <Text className="text-grey-500 font-clash-regular text-base">
-            Loading transactions...
-          </Text>
-        ) : error ? (
-          <Text className="text-red-500 font-clash-regular text-base">
-            {error}
-          </Text>
-        ) : recentTransactions.length === 0 ? (
-          <Text className="text-grey-500 font-clash-regular text-base">
-            No recent transactions yet.
-          </Text>
-        ) : (
-          recentTransactions.map((transaction) => (
-            <TransactionItem key={transaction.id} transaction={transaction} />
-          ))
-        )}
-      </View>
-    </ScrollView>
+          <View className="flex-row justify-between items-center mb-6">
+            <Text className="text-xl font-clash-semibold text-black">
+              Recent transactions
+            </Text>
+            <TouchableOpacity onPress={() => router.push("/home/transactions")}>
+              <Text className="text-grey-400 font-clash-medium text-sm">
+                See all
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {loading && !refreshing ? (
+            <Text className="text-grey-500 font-clash-regular text-base">
+              Loading transactions...
+            </Text>
+          ) : error ? (
+            <Text className="text-red-500 font-clash-regular text-base">
+              {error}
+            </Text>
+          ) : recentTransactions.length === 0 ? (
+            <Text className="text-grey-500 font-clash-regular text-base">
+              No recent transactions yet.
+            </Text>
+          ) : (
+            recentTransactions.map((transaction) => (
+              <TransactionItem key={transaction.id} transaction={transaction} />
+            ))
+          )}
+        </View>
+      </ScrollView>
+    </>
   );
 }
 

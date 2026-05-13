@@ -42,11 +42,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="transfer"
+        name="search"
         options={{
-          title: "Friends",
+          title: "Search",
           tabBarIcon: ({ color }) => (
-            <TabBarIcon name="people-outline" color={color} />
+            <TabBarIcon name="search-outline" color={color} />
           ),
         }}
       />

@@ -31,6 +31,8 @@ export default function HomeLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen name="nearby" options={{ headerShown: false }} />
+      <Stack.Screen name="qr-scanner" options={{ headerShown: false }} />
     </Stack>
   );
 }
