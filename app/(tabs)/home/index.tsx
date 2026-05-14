@@ -299,25 +299,26 @@ export default function HomeScreen() {
   return (
     <>
       <Modal visible={qrVisible} animationType="slide" transparent>
-        <View className="flex-1 bg-black/60 items-center justify-center px-6">
-          <View className="w-full rounded-[30px] bg-white p-6 shadow-lg">
-            <View className="flex-row items-center justify-between mb-6">
-              <View className="flex-1 items-center">
-                <Text className="text-[#1A1A1A] font-clash-bold text-[20px]">
-                  Your QR Code
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => setQrVisible(false)}
-                className="p-2"
-              >
-                <Ionicons name="close" size={24} color="#1A1A1A" />
-              </TouchableOpacity>
-            </View>
+        <View className="flex-1 bg-white">
+          <View className="px-6 pt-14 pb-4 bg-white flex-row items-center justify-between">
+            <View className="w-10" />
+            <Text className="text-[#1A1A1A] font-clash-bold text-[20px]">
+              Your QR Code
+            </Text>
+            <TouchableOpacity
+              onPress={() => setQrVisible(false)}
+              className="p-2"
+            >
+              <Ionicons name="close" size={28} color="#1A1A1A" />
+            </TouchableOpacity>
+          </View>
 
-            <View className="rounded-[20px] bg-white px-6 py-6 items-center justify-center">
+          <View className="flex-1 items-center justify-center px-6">
+            <View className="bg-white rounded-[20px] p-[24px] shadow-sm border border-[#F3F4F6]">
               {qrLoading ? (
-                <ActivityIndicator size="large" color="#1A1A1A" />
+                <View style={{ width: 240, height: 240, alignItems: 'center', justifyContent: 'center' }}>
+                  <ActivityIndicator size="large" color="#00D68F" />
+                </View>
               ) : qrPayload ? (
                 <QRCode
                   value={qrPayload}
@@ -326,41 +327,43 @@ export default function HomeScreen() {
                   color="black"
                 />
               ) : (
-                <Text className="text-grey-500 text-center">
-                  Unable to load QR code.
-                </Text>
+                <View style={{ width: 240, height: 240, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text className="text-grey-500 text-center">
+                    Unable to load QR code.
+                  </Text>
+                </View>
               )}
             </View>
 
-            <View className="items-center mt-6">
+            <View className="items-center mt-8">
               <Image
                 source={{
                   uri: user?.avatar_url ?? "https://i.pravatar.cc/100",
                 }}
-                className="h-12 w-12 rounded-full"
+                className="h-[48px] w-[48px] rounded-full"
               />
-              <Text className="mt-4 text-[#1A1A1A] font-clash-bold text-[16px]">
+              <Text className="mt-3 text-[#1A1A1A] font-clash-bold text-[16px]">
                 {user?.first_name} {user?.last_name}
               </Text>
-              <Text className="text-grey-500 font-clash-regular text-[14px]">
+              <Text className="text-[#6B7280] font-clash-regular text-[14px]">
                 @{(user?.first_name ?? "user").toLowerCase()}
               </Text>
             </View>
 
             <TouchableOpacity
               onPress={handleShareQr}
-              className="mt-6 h-12 w-full items-center justify-center rounded-full bg-[#F3F4F6]"
+              className="mt-[24px] h-[48px] w-full items-center justify-center rounded-full bg-[#F3F4F6]"
             >
-              <Text className="text-[#111827] font-clash-medium text-base">
+              <Text className="text-[#1A1A1A] font-clash-medium text-[14px]">
                 Share
               </Text>
             </TouchableOpacity>
 
-            {qrRefreshing ? (
-              <Text className="mt-3 text-center text-grey-400 text-sm">
+            {(qrRefreshing || (qrTTL !== null && qrTTL <= 30)) && (
+              <Text className="mt-4 text-center text-[#9CA3AF] font-clash-medium text-[12px]">
                 Refreshing…
               </Text>
-            ) : null}
+            )}
           </View>
         </View>
       </Modal>
