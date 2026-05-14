@@ -42,20 +42,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="transfer"
+        name="search"
         options={{
-          title: "Transfer",
+          title: "Search",
           tabBarIcon: ({ color }) => (
-            <TabBarIcon name="swap-horizontal-outline" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="cards"
-        options={{
-          title: "Cards",
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon name="card-outline" color={color} />
+            <TabBarIcon name="search-outline" color={color} />
           ),
         }}
       />

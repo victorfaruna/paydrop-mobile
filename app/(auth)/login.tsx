@@ -15,25 +15,19 @@ import {
   View,
 } from "react-native";
 
-export default function PhoneScreen() {
+const BASE_URL = "https://pay-drop-backend.vercel.app";
+
+export default function LoginScreen() {
   const router = useRouter();
-  const BASE_URL = "https://pay-drop-backend.vercel.app";
   const [phone, setPhone] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
   const [loading, setLoading] = useState(false);
-  const canSubmit = Boolean(
-    phone.trim() && firstName.trim() && lastName.trim(),
-  );
 
   const handleSubmit = async () => {
     try {
       setLoading(true);
       const formattedPhone = phone.startsWith("0") ? phone : `0${phone}`;
       const payload = { phone: formattedPhone };
-      console.log("Requesting OTP", {
+      console.log("Requesting OTP for login", {
         url: `${BASE_URL}/api/v1/auth/request-otp`,
         payload,
       });
@@ -45,9 +39,10 @@ export default function PhoneScreen() {
       console.log("OTP request response", response.data);
 
       router.push({
-        pathname: "/(auth)/otp",
+        pathname: "./otp",
         params: {
           phone: formattedPhone,
+          mode: "login",
         },
       });
     } catch (error) {
@@ -88,13 +83,13 @@ export default function PhoneScreen() {
               className="size-16 mt-10 mb-4"
             />
             <Text className="text-4xl font-clash-semibold text-black mb-2 ">
-              Register
+              Login
             </Text>
             <Text className="text-base font-clash-regular text-grey-500 mb-10 leading-6">
-              Create an account using your phone number, name, and email.
+              Enter your phone number to receive a one-time login code.
             </Text>
 
-            <View className="bg-grey-50 h-16 rounded-xl flex-row items-center px-6 mb-4 border border-grey-200">
+            <View className="bg-grey-50 h-16 rounded-xl flex-row items-center px-6 mb-6 border border-grey-200">
               <Text className="text-lg font-clash-medium mr-4">+234</Text>
               <View className="w-[1px] h-8 bg-grey-300 mr-4" />
               <TextInput
@@ -106,50 +101,13 @@ export default function PhoneScreen() {
                 onChangeText={setPhone}
               />
             </View>
-            <View className="bg-grey-50 h-16 rounded-xl justify-center px-6 mb-4 border border-grey-200">
-              <TextInput
-                placeholder="First Name"
-                placeholderTextColor="#9CA3AF"
-                className="text-lg font-clash-regular text-black"
-                value={firstName}
-                onChangeText={setFirstName}
-              />
-            </View>
-            <View className="bg-grey-50 h-16 rounded-xl justify-center px-6 mb-4 border border-grey-200">
-              <TextInput
-                placeholder="Last Name"
-                placeholderTextColor="#9CA3AF"
-                className="text-lg font-clash-regular text-black"
-                value={lastName}
-                onChangeText={setLastName}
-              />
-            </View>
-            <View className="bg-grey-50 h-16 rounded-xl justify-center px-6 mb-4 border border-grey-200">
-              <TextInput
-                placeholder="Email"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="email-address"
-                className="text-lg font-clash-regular text-black"
-                value={email}
-                onChangeText={setEmail}
-              />
-            </View>
-            {/* <View className="bg-grey-50 h-16 rounded-xl justify-center px-6 mb-6 border border-grey-200">
-              <TextInput
-                placeholder="Avatar URL (optional)"
-                placeholderTextColor="#9CA3AF"
-                className="text-lg font-clash-regular text-black"
-                value={avatarUrl}
-                onChangeText={setAvatarUrl}
-              />
-            </View> */}
 
             <TouchableOpacity
               className={`h-16 rounded-2xl justify-center items-center ${
-                canSubmit ? "bg-purple-500" : "bg-purple-300"
+                phone && !loading ? "bg-purple-500" : "bg-purple-300"
               }`}
               onPress={handleSubmit}
-              disabled={!canSubmit || loading}
+              disabled={!phone || loading}
             >
               {loading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
@@ -162,10 +120,10 @@ export default function PhoneScreen() {
 
             <TouchableOpacity
               className="mt-4 items-center"
-              onPress={() => router.push({ pathname: "./login" })}
+              onPress={() => router.push({ pathname: "./phone" })}
             >
               <Text className="text-purple-500 font-clash-semibold">
-                Already have an account? Login
+                Need to register? Create account
               </Text>
             </TouchableOpacity>
           </View>

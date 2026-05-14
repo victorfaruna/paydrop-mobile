@@ -1,23 +1,18 @@
-import { useAppState } from "@/store/appState";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 export default function SplashScreen() {
   const router = useRouter();
-  const { onboardingCompleted } = useAppState();
 
   useEffect(() => {
     // Wait at least 2 seconds total for the splash animation
     const timer = setTimeout(() => {
-      if (onboardingCompleted) {
-        router.replace("/(tabs)/home");
-      } else {
-        router.replace("/(auth)");
-      }
+      // router.replace("/(auth)/phone");
+      router.replace("/(tabs)/home");
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [onboardingCompleted]);
+  }, []);
 
   return (
     <View className="flex-1 bg-purple-500 items-center justify-center">
