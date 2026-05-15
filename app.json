@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "paydrop-mobile",
+    "name": "PayDrop",
     "slug": "paydrop-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -19,7 +19,9 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSBluetoothAlwaysUsageDescription": "PayDrop uses Bluetooth to find nearby users for seamless payments.",
-        "NSBluetoothPeripheralUsageDescription": "PayDrop uses Bluetooth to make your device discoverable to nearby users."
+        "NSBluetoothPeripheralUsageDescription": "PayDrop uses Bluetooth to make your device discoverable to nearby users.",
+        "NSCameraUsageDescription": "PayDrop needs access to your camera to scan QR codes and take photos.",
+        "NSMicrophoneUsageDescription": "PayDrop needs access to your microphone for video features."
       }
     },
     "android": {
@@ -34,7 +36,9 @@
         "android.permission.BLUETOOTH_SCAN",
         "android.permission.BLUETOOTH_ADVERTISE",
         "android.permission.BLUETOOTH_CONNECT",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -51,6 +55,20 @@
           "modes": ["peripheral", "central"],
           "bluetoothAlwaysPermission": "Allow PayDrop to use Bluetooth to find nearby users."
         }
+      ],
+      "@react-native-community/datetimepicker",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow PayDrop to access your camera to scan QR codes and take photos.",
+          "microphonePermission": "Allow PayDrop to access your microphone for video features."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow PayDrop to access your photos."
+        }
       ]
     ],
     "experiments": {
@@ -59,7 +77,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "3675fd77-9901-4d22-ba8f-2f95f7f32ec4"
+        "projectId": "68e4e544-179c-4f12-85e1-8af2f6a64f8c"
       }
     }
   }

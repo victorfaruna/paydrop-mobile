@@ -1,14 +1,27 @@
+import { useAppState } from "@/store/appState";
+import { useUserStore } from "@/store/userStore";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
+
 export default function SplashScreen() {
   const router = useRouter();
 
+  ///...................
+  const { user } = useUserStore();
+  const { onboardingCompleted } = useAppState();
+
+  ///...................
   useEffect(() => {
     // Wait at least 2 seconds total for the splash animation
     const timer = setTimeout(() => {
-      // router.replace("/(auth)/phone");
-      router.replace("/(tabs)/home");
+      if (user && onboardingCompleted) {
+        router.replace("/(tabs)/home");
+      } else if (user && !onboardingCompleted) {
+        router.replace("/(auth)/register");
+      } else {
+        router.replace("/(auth)");
+      }
     }, 2000);
 
     return () => clearTimeout(timer);
@@ -26,9 +39,7 @@ export default function SplashScreen() {
           className="w-48 h-48"
           resizeMode="contain"
         />
-        <Text className="text-white text-4xl mt-4 font-clash-bold">
-          PayDrop
-        </Text>
+        <Text className="text-white text-4xl font-clash-bold">PayDrop</Text>
       </View>
 
       <Text className="absolute bottom-12 text-white text-base font-clash-medium tracking-widest">

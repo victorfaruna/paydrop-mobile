@@ -1,14 +1,9 @@
+import { koboToNaira } from "@/utils/currency";
+import size from "@/utils/size";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef } from "react";
-import {
-  Animated,
-  Share,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { koboToNaira } from "@/utils/currency";
+import { Animated, Share, Text, TouchableOpacity, View } from "react-native";
 
 export default function PaymentResultScreen() {
   const router = useRouter();
@@ -21,7 +16,7 @@ export default function PaymentResultScreen() {
   }>();
 
   const isSuccess = params.success === "true";
-  
+
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const insightAnim = useRef(new Animated.Value(0)).current;
 
@@ -78,14 +73,14 @@ export default function PaymentResultScreen() {
         <Text className="text-[#1A1A1A] font-clash-bold text-[32px] mb-2">
           {isSuccess ? "Sent!" : "Transfer Failed"}
         </Text>
-        
+
         {isSuccess ? (
           <>
             <Text className="text-[#6B7280] font-clash-medium text-[20px] mb-1">
               {koboToNaira(parseInt(params.amount))}
             </Text>
             <Text className="text-[#6B7280] font-clash-regular text-[14px]">
-              to @{params.recipientName.replace(/\s+/g, '').toLowerCase()}
+              to @{params.recipientName.replace(/\s+/g, "").toLowerCase()}
             </Text>
             {params.txId && (
               <Text className="text-[#9CA3AF] font-space-mono text-[10px] mt-4 uppercase">
@@ -97,7 +92,12 @@ export default function PaymentResultScreen() {
               style={{
                 opacity: insightAnim,
                 transform: [
-                  { translateY: insightAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }
+                  {
+                    translateY: insightAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [10, 0],
+                    }),
+                  },
                 ],
               }}
               className="bg-[#00D68F]/10 px-4 py-2 rounded-full mt-6"
@@ -117,11 +117,16 @@ export default function PaymentResultScreen() {
       <View className="absolute bottom-12 left-6 right-6">
         <TouchableOpacity
           onPress={handleDone}
-          className="bg-[#00D68F] h-[52px] rounded-full items-center justify-center w-full mb-4"
+          style={{
+            height: size.height(56),
+          }}
+          className="bg-purple-400 rounded-full items-center justify-center w-full mb-4"
         >
-          <Text className="text-black font-clash-bold text-[16px]">Done</Text>
+          <Text className="text-white font-clash-semibold text-[16px]">
+            Done
+          </Text>
         </TouchableOpacity>
-        
+
         {isSuccess && (
           <TouchableOpacity onPress={handleShare} className="items-center">
             <Text className="text-[#6B7280] font-clash-medium text-[14px]">

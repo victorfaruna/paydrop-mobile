@@ -1,3 +1,4 @@
+import ScreenView from "@/components/layout/ScreenView";
 import { useUserStore } from "@/store/userStore";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -50,7 +51,7 @@ export default function ProfileScreen() {
 
   const handleLogout = () => {
     logout();
-    router.replace("/(auth)/phone");
+    router.replace("/(auth)/login");
   };
 
   const handleEditProfile = () => {
@@ -70,69 +71,72 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView
-      className="flex-1 bg-white"
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Header */}
-      <View className="bg-white px-6 pt-14 pb-4">
-        <Text className="text-black font-clash-bold text-2xl">Profile</Text>
-      </View>
-
-      {/* Profile Card */}
-      <View className="bg-white rounded-3xl mx-6 mt-6 p-6 border border-grey-100">
-        <View className="items-center mb-6">
-          <TouchableOpacity onPress={handleAvatarPress} className="relative">
-            <View className="w-24 h-24 rounded-full bg-purple-100 items-center justify-center mb-4 border-4 border-purple-200">
-              {avatar ? (
-                <Image
-                  source={{ uri: avatar }}
-                  className="w-24 h-24 rounded-full"
-                />
-              ) : (
-                <Text className="text-purple-600 font-clash-bold text-4xl">
-                  {fullName
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase()}
-                </Text>
-              )}
-            </View>
-            <View className="absolute bottom-4 right-0 bg-purple-500 rounded-full p-2 border-2 border-white">
-              <Ionicons name="camera" size={16} color="white" />
-            </View>
-          </TouchableOpacity>
-          <Text className="text-black font-clash-bold text-2xl mb-1">
-            {fullName}
-          </Text>
-          <Text className="text-grey-500 font-clash-regular text-base mb-4">
-            {username}
+    <ScreenView>
+      <ScrollView
+        className="flex-1 bg-white"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View className="bg-white px-6 pt-4 pb-4">
+          <Text className="text-black font-clash-semibold text-2xl">
+            Profile
           </Text>
         </View>
 
-        {/* Trust Score with Progress Bar */}
-        <View className="bg-grey-50 rounded-2xl p-4 mb-4">
-          <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-black font-clash-semibold text-base">
-              Trust Score
+        {/* Profile Card */}
+        <View className="bg-white rounded-3xl mx-6 mt-6 p-6 border border-grey-100">
+          <View className="items-center mb-6">
+            <TouchableOpacity onPress={handleAvatarPress} className="relative">
+              <View className="w-24 h-24 rounded-full bg-purple-100 items-center justify-center mb-4 border-2 border-purple-200">
+                {avatar ? (
+                  <Image
+                    source={{ uri: avatar }}
+                    className="w-24 h-24 rounded-full"
+                  />
+                ) : (
+                  <Text className="text-purple-600 font-clash-medium text-3xl">
+                    {fullName
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()}
+                  </Text>
+                )}
+              </View>
+              <View className="absolute bottom-4 right-0 bg-purple-500 rounded-full p-2 border-2 border-white">
+                <Ionicons name="camera" size={16} color="white" />
+              </View>
+            </TouchableOpacity>
+            <Text className="text-black font-clash-semibold text-2xl mb-1">
+              {fullName}
             </Text>
-            <View className="bg-green-100 rounded-full px-3 py-1">
-              <Text className="text-green-600 font-clash-bold text-sm">
-                {trustScore}%
+            <Text className="text-grey-500 font-clash-regular text-base mb-4">
+              @{username}
+            </Text>
+          </View>
+
+          {/* Trust Score with Progress Bar */}
+          <View className="bg-grey-50 rounded-2xl p-4 mb-4">
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className="text-black font-clash-semibold text-base">
+                Trust Score
               </Text>
+              <View className="bg-green-100 rounded-full px-3 py-1">
+                <Text className="text-green-600 font-clash-medium text-sm">
+                  {trustScore}%
+                </Text>
+              </View>
+            </View>
+            <View className="h-2 bg-grey-200 rounded-full overflow-hidden">
+              <View
+                style={{ width: `${trustScore}%` }}
+                className="h-full bg-gradient-to-r from-green-400 to-green-600"
+              />
             </View>
           </View>
-          <View className="h-2 bg-grey-200 rounded-full overflow-hidden">
-            <View
-              style={{ width: `${trustScore}%` }}
-              className="h-full bg-gradient-to-r from-green-400 to-green-600"
-            />
-          </View>
-        </View>
 
-        {/* KYC Status */}
-        {/* <View className="flex-row items-center bg-blue-50 rounded-2xl p-3 border border-blue-100">
+          {/* KYC Status */}
+          {/* <View className="flex-row items-center bg-blue-50 rounded-2xl p-3 border border-blue-100">
           <Ionicons name="shield-checkmark" size={20} color="#3B82F6" />
           <Text className="text-blue-600 font-clash-regular text-sm ml-3 flex-1">
             {user?.kyc_verified
@@ -140,51 +144,53 @@ export default function ProfileScreen() {
               : "Complete KYC to unlock features"}
           </Text>
         </View> */}
-      </View>
+        </View>
 
-      {/* Trust Breakdown Card */}
-      <View className="bg-white rounded-3xl mx-6 mt-6 p-6 border border-grey-100">
-        <Text className="text-black font-clash-bold text-lg mb-4">
-          Trust Breakdown
-        </Text>
-        <View className="space-y-3">
-          <View className="flex-row items-center p-4 bg-blue-50 rounded-2xl border border-blue-100">
-            <View className="w-12 h-12 bg-blue-100 rounded-full items-center justify-center mr-4">
-              <Ionicons
-                name="swap-horizontal-outline"
-                size={20}
-                color="#3B82F6"
-              />
+        {/* Trust Breakdown Card */}
+        <View className="bg-white rounded-3xl mx-6 mt-6 p-6 border border-grey-100">
+          <Text className="text-black font-clash-semibold text-lg mb-4">
+            Trust Breakdown
+          </Text>
+          <View className="space-y-3 gap-4">
+            <View className="flex-row items-center p-4 bg-blue-50 rounded-2xl border border-blue-100">
+              <View className="w-12 h-12 bg-blue-100 rounded-full items-center justify-center mr-4">
+                <Ionicons
+                  name="swap-horizontal-outline"
+                  size={20}
+                  color="#3B82F6"
+                />
+              </View>
+              <View className="flex-1">
+                <Text className="text-black font-clash-semibold text-sm">
+                  Successful Payments
+                </Text>
+                <Text className="text-grey-500 font-clash-regular text-xs mt-1">
+                  143 transactions
+                </Text>
+              </View>
+              <Text className="text-blue-600 font-clash-bold text-lg">143</Text>
             </View>
-            <View className="flex-1">
-              <Text className="text-black font-clash-semibold text-sm">
-                Successful Payments
-              </Text>
-              <Text className="text-grey-500 font-clash-regular text-xs mt-1">
-                143 transactions
-              </Text>
-            </View>
-            <Text className="text-blue-600 font-clash-bold text-lg">143</Text>
-          </View>
-          <View className="flex-row items-center p-4 bg-purple-50 rounded-2xl border border-purple-100">
-            <View className="w-12 h-12 bg-purple-100 rounded-full items-center justify-center mr-4">
-              <Ionicons name="people-outline" size={20} color="#A855F7" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-black font-clash-semibold text-sm">
-                Mutual Trust
-              </Text>
-              <Text className="text-grey-500 font-clash-regular text-xs mt-1">
-                People trust you
+            <View className="flex-row items-center p-4 bg-purple-50 rounded-2xl border border-purple-100">
+              <View className="w-12 h-12 bg-purple-100 rounded-full items-center justify-center mr-4">
+                <Ionicons name="people-outline" size={20} color="#A855F7" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-black font-clash-semibold text-sm">
+                  Mutual Trust
+                </Text>
+                <Text className="text-grey-500 font-clash-regular text-xs mt-1">
+                  People trust you
+                </Text>
+              </View>
+              <Text className="text-purple-600 font-clash-bold text-lg">
+                38
               </Text>
             </View>
-            <Text className="text-purple-600 font-clash-bold text-lg">38</Text>
           </View>
         </View>
-      </View>
 
-      {/* Presence Activity Card */}
-      {/* <View className="bg-grey-50 rounded-3xl mx-6 mt-4 p-5 border border-grey-100">
+        {/* Presence Activity Card */}
+        {/* <View className="bg-grey-50 rounded-3xl mx-6 mt-4 p-5 border border-grey-100">
         <Text className="text-black font-clash-semibold text-sm mb-4">
           Where you're seen
         </Text>
@@ -199,85 +205,94 @@ export default function ProfileScreen() {
         </View>
       </View> */}
 
-      {/* Settings Section */}
-      <View className="mx-6 mt-8">
-        <Text className="text-black font-clash-bold text-lg mb-4">
-          Settings
-        </Text>
-        <TouchableOpacity
-          onPress={handleEditProfile}
-          className="bg-white rounded-2xl p-4 flex-row items-center justify-between border border-grey-100 mb-3"
-        >
-          <View className="flex-row items-center flex-1">
-            <View className="w-10 h-10 bg-purple-100 rounded-full items-center justify-center mr-4">
-              <Ionicons name="person-outline" size={18} color="#A855F7" />
-            </View>
-            <Text className="text-black font-clash-semibold text-base">
-              Edit Profile
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handleNotifications}
-          className="bg-white rounded-2xl p-4 flex-row items-center justify-between border border-grey-100 mb-3"
-        >
-          <View className="flex-row items-center flex-1">
-            <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-4">
-              <Ionicons
-                name="notifications-outline"
-                size={18}
-                color="#3B82F6"
-              />
-            </View>
-            <Text className="text-black font-clash-semibold text-base">
-              Notifications
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handleSecurity}
-          className="bg-white rounded-2xl p-4 flex-row items-center justify-between border border-grey-100 mb-3"
-        >
-          <View className="flex-row items-center flex-1">
-            <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center mr-4">
-              <Ionicons name="lock-closed-outline" size={18} color="#10B981" />
-            </View>
-            <Text className="text-black font-clash-semibold text-base">
-              Security
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handleHelp}
-          className="bg-white rounded-2xl p-4 flex-row items-center justify-between border border-grey-100"
-        >
-          <View className="flex-row items-center flex-1">
-            <View className="w-10 h-10 bg-orange-100 rounded-full items-center justify-center mr-4">
-              <Ionicons name="help-circle-outline" size={18} color="#F97316" />
-            </View>
-            <Text className="text-black font-clash-semibold text-base">
-              Help & Support
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Log Out Button */}
-      <TouchableOpacity
-        onPress={handleLogout}
-        className="mx-6 mt-8 mb-8 bg-red-50 rounded-2xl p-4 border-2 border-red-200 items-center"
-      >
-        <View className="flex-row items-center">
-          <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-          <Text className="text-red-600 font-clash-semibold text-base ml-3">
-            Log Out
+        {/* Settings Section */}
+        <View className="mx-6 mt-8">
+          <Text className="text-black font-clash-semibold text-lg mb-4">
+            Settings
           </Text>
+          <TouchableOpacity
+            onPress={handleEditProfile}
+            className="bg-white rounded-2xl p-4 flex-row items-center justify-between border border-grey-100 mb-3"
+          >
+            <View className="flex-row items-center flex-1">
+              <View className="w-10 h-10 bg-purple-100 rounded-full items-center justify-center mr-4">
+                <Ionicons name="person-outline" size={18} color="#A855F7" />
+              </View>
+              <Text className="text-black font-clash-semibold text-base">
+                Edit Profile
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleNotifications}
+            className="bg-white rounded-2xl p-4 flex-row items-center justify-between border border-grey-100 mb-3"
+          >
+            <View className="flex-row items-center flex-1">
+              <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-4">
+                <Ionicons
+                  name="notifications-outline"
+                  size={18}
+                  color="#3B82F6"
+                />
+              </View>
+              <Text className="text-black font-clash-semibold text-base">
+                Notifications
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleSecurity}
+            className="bg-white rounded-2xl p-4 flex-row items-center justify-between border border-grey-100 mb-3"
+          >
+            <View className="flex-row items-center flex-1">
+              <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center mr-4">
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={18}
+                  color="#10B981"
+                />
+              </View>
+              <Text className="text-black font-clash-semibold text-base">
+                Security
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleHelp}
+            className="bg-white rounded-2xl p-4 flex-row items-center justify-between border border-grey-100"
+          >
+            <View className="flex-row items-center flex-1">
+              <View className="w-10 h-10 bg-orange-100 rounded-full items-center justify-center mr-4">
+                <Ionicons
+                  name="help-circle-outline"
+                  size={18}
+                  color="#F97316"
+                />
+              </View>
+              <Text className="text-black font-clash-semibold text-base">
+                Help & Support
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </TouchableOpacity>
         </View>
-      </TouchableOpacity>
-    </ScrollView>
+
+        {/* Log Out Button */}
+        <TouchableOpacity
+          onPress={handleLogout}
+          className="mx-6 mt-8 mb-8 bg-red-50 rounded-2xl p-4 border border-red-200 items-center"
+        >
+          <View className="flex-row items-center">
+            <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+            <Text className="text-red-600 font-clash-medium text-base ml-3">
+              Log Out
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </ScrollView>
+    </ScreenView>
   );
 }

@@ -1,5 +1,6 @@
+import FraudDetailModal from "@/components/sections/FraudDetailModal";
+import api from "@/services/api";
 import { useUserStore } from "@/store/userStore";
-import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -9,9 +10,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-const BASE_URL = "https://pay-drop-backend.vercel.app";
-const DEVICE_ID = "paydrop-mobile-app";
 
 interface Transaction {
   id: string;
@@ -27,48 +25,6 @@ interface Transaction {
   updatedAt: string;
 }
 
-const DEFAULT_TRANSACTIONS: Transaction[] = [
-  {
-    id: "t1",
-    sender_id: "u2",
-    recipient_id: "u0",
-    amount: 250000,
-    status: "completed",
-    note: "Salary credit",
-    squad_ref: "PayDay",
-    fraud_score: 5,
-    fraud_verdict: "approved",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "t2",
-    sender_id: "u0",
-    recipient_id: "u3",
-    amount: -75000,
-    status: "completed",
-    note: "Dinner with friends",
-    squad_ref: "Foodie",
-    fraud_score: 8,
-    fraud_verdict: "approved",
-    createdAt: new Date(Date.now() - 3600 * 1000 * 12).toISOString(),
-    updatedAt: new Date(Date.now() - 3600 * 1000 * 12).toISOString(),
-  },
-  {
-    id: "t3",
-    sender_id: "u0",
-    recipient_id: "u4",
-    amount: -150000,
-    status: "pending",
-    note: "Gift purchase",
-    squad_ref: "Gift Shop",
-    fraud_score: 12,
-    fraud_verdict: "review",
-    createdAt: new Date(Date.now() - 3600 * 1000 * 24).toISOString(),
-    updatedAt: new Date(Date.now() - 3600 * 1000 * 24).toISOString(),
-  },
-];
-
 const FILTERS = ["All", "Sent", "Received"] as const;
 
 type FilterType = (typeof FILTERS)[number];
@@ -83,6 +39,8 @@ export default function TransactionsScreen() {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
+  const [isFraudModalVisible, setIsFraudModalVisible] = useState(false);
 
   const fetchTransactions = async (pageNumber = 0, append = false) => {
     if (pageNumber === 0) {
@@ -94,20 +52,12 @@ export default function TransactionsScreen() {
 
     try {
       if (!accessToken) {
-        if (append) {
-          setTransactions((current) => [...current, ...DEFAULT_TRANSACTIONS]);
-        } else {
-          setTransactions(DEFAULT_TRANSACTIONS);
-        }
+        setTransactions([]);
         setHasMore(false);
         return;
       }
 
-      const response = await axios.get(`${BASE_URL}/api/v1/transactions`, {
-        headers: {
-          "x-device-id": DEVICE_ID,
-          Authorization: `Bearer ${accessToken}`,
-        },
+      const response = await api.get("/transactions", {
         params: {
           page: pageNumber,
           limit: 20,
@@ -175,7 +125,14 @@ export default function TransactionsScreen() {
     });
 
     return (
-      <View className="bg-white rounded-3xl p-4 mb-3 border border-grey-100 shadow-sm">
+      <TouchableOpacity
+        onPress={() => {
+          setSelectedTxId(item.id);
+          setIsFraudModalVisible(true);
+        }}
+        activeOpacity={0.7}
+        className="bg-white rounded-3xl p-4 mb-3 border border-grey-100 shadow-sm"
+      >
         <View className="flex-row justify-between items-start mb-3">
           <View>
             <Text className="text-black font-clash-semibold text-base">
@@ -203,7 +160,7 @@ export default function TransactionsScreen() {
             </Text>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -276,11 +233,11 @@ export default function TransactionsScreen() {
         />
       )}
 
-      {error ? (
-        <Text className="text-red-500 font-clash-regular text-sm mt-4">
-          {error}
-        </Text>
-      ) : null}
+      <FraudDetailModal
+        visible={isFraudModalVisible}
+        onClose={() => setIsFraudModalVisible(false)}
+        transactionId={selectedTxId}
+      />
     </View>
   );
 }

@@ -1,4 +1,5 @@
 import { COLORS } from "@/config/colors";
+import size from "@/utils/size";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import React from "react";
@@ -20,10 +21,10 @@ export default function TabLayout() {
         tabBarStyle: {
           borderTopWidth: 1,
           borderTopColor: "#F3F4F6",
-          height: 70,
-          paddingBottom: 12,
+          height: size.height(70),
+          paddingBottom: size.height(12),
 
-          paddingTop: 8,
+          paddingTop: size.height(8),
         },
 
         tabBarLabelStyle: {

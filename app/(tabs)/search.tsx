@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import axios from "axios";
+import api from "@/services/api";
 import * as Contacts from "expo-contacts";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -14,8 +14,7 @@ import {
   View,
 } from "react-native";
 
-const BASE_URL = "https://pay-drop-backend.vercel.app";
-const DEVICE_ID = "paydrop-mobile-app";
+
 
 interface User {
   id: string;
@@ -44,9 +43,8 @@ export default function SearchScreen() {
       }
       setLoading(true);
       try {
-        const response = await axios.get(`${BASE_URL}/api/v1/users/search`, {
+        const response = await api.get("/users/search", {
           params: { q: searchQuery },
-          headers: { "x-device-id": DEVICE_ID },
         });
         setSearchResults(response.data.users || []);
       } catch (error) {
@@ -108,7 +106,7 @@ export default function SearchScreen() {
   const handlePay = (user: User) => {
     // Navigate to RecipientPreview with user data
     router.push({
-      pathname: "/home/transfer" as any,
+      pathname: "/screens/payment/transfer" as any,
       params: { userId: user.id },
     });
   };

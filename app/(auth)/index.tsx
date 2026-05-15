@@ -41,7 +41,7 @@ export default function OnboardingScreen() {
   const flatListRef = useRef<FlatList>(null);
 
   const handleStartAuth = () => {
-    router.replace("/(auth)/phone");
+    router.replace("/(auth)/register");
   };
 
   const handleNext = () => {

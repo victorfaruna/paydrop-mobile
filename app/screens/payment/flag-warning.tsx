@@ -1,4 +1,4 @@
-import axios from "axios";
+import api from "@/services/api";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -10,8 +10,7 @@ import {
 import { useUserStore } from "@/store/userStore";
 import { koboToNaira } from "@/utils/currency";
 
-const BASE_URL = "https://pay-drop-backend.vercel.app";
-const DEVICE_ID = "paydrop-mobile-app";
+
 
 export default function FlagWarningScreen() {
   const router = useRouter();
@@ -51,19 +50,13 @@ export default function FlagWarningScreen() {
   const handleProceed = async () => {
     setProcessing(true);
     try {
-      await axios.post(
-        `${BASE_URL}/api/v1/transactions/transfer/confirm`,
-        { confirm_token: params.confirmToken },
-        {
-          headers: { 
-            "x-device-id": DEVICE_ID,
-            Authorization: accessToken ? `Bearer ${accessToken}` : undefined,
-          },
-        }
+      await api.post(
+        "/transactions/transfer/confirm",
+        { confirm_token: params.confirmToken }
       );
 
       router.push({
-        pathname: "/payment-result" as any,
+        pathname: "/screens/payment/payment-result" as any,
         params: {
           success: "true",
           amount: params.amount,
@@ -73,7 +66,7 @@ export default function FlagWarningScreen() {
     } catch (error: any) {
       console.error("Confirm error", error);
       router.push({
-        pathname: "/payment-result" as any,
+        pathname: "/screens/payment/payment-result" as any,
         params: {
           success: "false",
           error: error.response?.data?.message || "Confirmation failed",
