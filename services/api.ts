@@ -1,3 +1,4 @@
+import { getDeviceId } from "@/lib/deviceId";
 import axios from "axios";
 import { useUserStore } from "../store/userStore";
 
@@ -21,17 +22,24 @@ const processQueue = (error: any, token: string | null = null) => {
 };
 
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
+    const deviceId = await getDeviceId();
     const accessToken = useUserStore.getState().accessToken;
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
-    config.headers["x-device-id"] = "3235777a-299a-4710-9c18-f5d9c751e3ab";
+
+    // Add logging to debug 404
+    console.log(
+      `[API] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`,
+    );
+
+    config.headers["x-device-id"] = deviceId;
     return config;
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 api.interceptors.response.use(
@@ -71,9 +79,9 @@ api.interceptors.response.use(
           { refreshToken },
           {
             headers: {
-              "x-device-id": "3235777a-299a-4710-9c18-f5d9c751e3ab",
+              "x-device-id": await getDeviceId(),
             },
-          }
+          },
         );
 
         const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
@@ -94,7 +102,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

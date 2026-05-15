@@ -1,4 +1,4 @@
-import { resolveDiscoveryToken } from "@/services/user";
+import { resolveDiscoveryTokens } from "@/services/user";
 import { useUserStore } from "@/store/userStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "@tanstack/react-query";
@@ -31,13 +31,18 @@ export default function QRScannerScreen() {
   };
 
   const { mutate: resolveMutate, isPending: resolving } = useMutation({
-    mutationFn: resolveDiscoveryToken,
-    onSuccess: (data) => {
-      if (data.user) {
+    mutationFn: (tokens: string[]) => resolveDiscoveryTokens(tokens),
+    onSuccess: (users: any[]) => {
+      if (users && users.length > 0) {
+        const user = users[0];
         router.push({
           pathname: "/screens/payment/recipient-preview" as any,
-          params: { user: JSON.stringify(data.user) },
+          params: { user: JSON.stringify(user) },
         });
+      } else {
+        setError("User not found");
+        setScanned(false);
+        setTimeout(() => setError(null), 3000);
       }
     },
     onError: (err: any) => {
@@ -52,12 +57,12 @@ export default function QRScannerScreen() {
     if (scanned || resolving) return;
     setScanned(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    resolveMutate(data);
+    resolveMutate([data]);
   };
 
   const handleManualResolve = () => {
     if (!manualCode || resolving) return;
-    resolveMutate(manualCode);
+    resolveMutate([manualCode]);
   };
 
   if (!permission) {

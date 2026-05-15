@@ -2145,7 +2145,7 @@ barcode-detector@^3.0.0:
   dependencies:
     zxing-wasm "3.0.3"
 
-base64-js@^1.2.3, base64-js@^1.3.1, base64-js@^1.5.1:
+base64-js@^1.2.3, base64-js@^1.3.0, base64-js@^1.3.1, base64-js@^1.5.1:
   version "1.5.1"
   resolved "https://registry.yarnpkg.com/base64-js/-/base64-js-1.5.1.tgz#1b1b440160a5bf7ad40b650f095963481903930a"
   integrity sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==
@@ -2842,6 +2842,11 @@ event-target-shim@^5.0.0:
   resolved "https://registry.yarnpkg.com/event-target-shim/-/event-target-shim-5.0.1.tgz#5d4d3ebdf9583d63a5333ce2deb7480ab2b05789"
   integrity sha512-i/2XbnSz/uxRCU6+NdVJgKWDTM427+MqYbkQzD321DuCQJUqOuJKIA0IM2+W2xtYHdKOmZ4dR6fExsd4SXL+WQ==
 
+expo-application@^55.0.15:
+  version "55.0.15"
+  resolved "https://registry.yarnpkg.com/expo-application/-/expo-application-55.0.15.tgz#5ae5484baa94c69a6eda92757c8e76be035a628d"
+  integrity sha512-eWf5OGrat1r/TYr0daL684C6pJYiN2k30NmcISsD9fbtZLfA6Sbo/JebfYzP3OjO/T/i8j/9Pf3ePqUYPLfZnw==
+
 expo-asset@~12.0.13:
   version "12.0.13"
   resolved "https://registry.yarnpkg.com/expo-asset/-/expo-asset-12.0.13.tgz#1974ed7abee2ad987a519dbdcbf7f0c647dddf5b"
@@ -2874,6 +2879,13 @@ expo-contacts@~15.0.11:
   version "15.0.11"
   resolved "https://registry.yarnpkg.com/expo-contacts/-/expo-contacts-15.0.11.tgz#f3164a1d8298d41b0bac9fcb3500bfa6027aa18b"
   integrity sha512-buKkoQuWJgVSEvR1Yloa5SvGC/ud7T2YeYDe0R7Aa0oz8pwQpjk3W7OoL3QrXIfYcuKTrIz6ffqC8lc3peaAyg==
+
+expo-crypto@~15.0.9:
+  version "15.0.9"
+  resolved "https://registry.yarnpkg.com/expo-crypto/-/expo-crypto-15.0.9.tgz#5600c2e08e9946a8b1dfc8ceaa9891714b79ca8a"
+  integrity sha512-SNWKa2fXx7v9gkp1h/7nqXY5XN7qgNDn3yRc2aO0gWGbeMbvob/haMxxsPFe9f51aqH5NjNCqHf2kvLhvAd8KQ==
+  dependencies:
+    base64-js "^1.3.0"
 
 expo-dev-client@~6.0.21:
   version "6.0.21"
@@ -3013,6 +3025,11 @@ expo-router@~6.0.23:
     shallowequal "^1.1.0"
     use-latest-callback "^0.2.1"
     vaul "^1.1.2"
+
+expo-secure-store@~15.0.8:
+  version "15.0.8"
+  resolved "https://registry.yarnpkg.com/expo-secure-store/-/expo-secure-store-15.0.8.tgz#678065599bb76061b5a85b15b9426bf7a11089ae"
+  integrity sha512-lHnzvRajBu4u+P99+0GEMijQMFCOYpWRO4dWsXSuMt77+THPIGjzNvVKrGSl6mMrLsfVaKL8BpwYZLGlgA+zAw==
 
 expo-server@^1.0.5, expo-server@^1.0.6:
   version "1.0.6"
@@ -4959,6 +4976,11 @@ react-is@^19.1.0:
   resolved "https://registry.yarnpkg.com/react-is/-/react-is-19.2.6.tgz#aeee6159b159eb7f520d672cffcc69e7052d288f"
   integrity sha512-XjBR15BhXuylgWGuslhDKqlSayuqvqBX91BP8pauG8kd1zY8kotkNWbXksTCNRarse4kuGbe2kIY05ARtwNIvw==
 
+react-native-ble-advertiser@^0.0.17:
+  version "0.0.17"
+  resolved "https://registry.yarnpkg.com/react-native-ble-advertiser/-/react-native-ble-advertiser-0.0.17.tgz#ee698e451260757961c92337f946003dd7987667"
+  integrity sha512-26kWCC/xyo/dtXQSD52vFqPXzD0xKWuyBIZR7pmXLlqDzVQR+N80sqKVweCt7OmPhkRloQ0z5D0Q7Jnbw6pvmA==
+
 react-native-ble-peripheral@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/react-native-ble-peripheral/-/react-native-ble-peripheral-2.0.1.tgz#54d170fc16df39dbb3ff345374b327705f662f77"
@@ -4985,6 +5007,11 @@ react-native-is-edge-to-edge@^1.1.6, react-native-is-edge-to-edge@^1.2.1:
   version "1.3.1"
   resolved "https://registry.yarnpkg.com/react-native-is-edge-to-edge/-/react-native-is-edge-to-edge-1.3.1.tgz#feb9a6a8faf0874298947edd556e5af22044e139"
   integrity sha512-NIXU/iT5+ORyCc7p0z2nnlkouYKX425vuU1OEm6bMMtWWR9yvb+Xg5AZmImTKoF9abxCPqrKC3rOZsKzUYgYZA==
+
+react-native-permissions@^5.5.1:
+  version "5.5.1"
+  resolved "https://registry.yarnpkg.com/react-native-permissions/-/react-native-permissions-5.5.1.tgz#c262a3727f94700bcf2984893021f9c180bb8320"
+  integrity sha512-nTKFoj47b6EXNqbbg+8VFwBWMpxF1/UTbrNBLpXkWpt005pH4BeFv/NwpcC1iNhToKBrxQD+5kI0z6+kTYoYWA==
 
 react-native-qrcode-svg@^6.3.21:
   version "6.3.21"

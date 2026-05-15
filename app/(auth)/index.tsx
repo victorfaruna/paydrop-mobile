@@ -1,3 +1,4 @@
+import ScreenView from "@/components/layout/ScreenView";
 import { COLORS } from "@/config/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -54,7 +55,7 @@ export default function OnboardingScreen() {
 
   const renderItem = ({ item }: { item: (typeof slides)[0] }) => (
     <View style={{ width }} className="flex-1 items-center justify-center px-8">
-      <View className="w-72 h-72 bg-purple-100 rounded-full items-center justify-center mb-12 overflow-hidden">
+      <View className="w-72 h-72 bg-purple-100 rounded-3xl items-center justify-center mb-12 overflow-hidden">
         <View className="absolute inset-0 opacity-20">
           <Image
             source={require("@/assets/images/bg-mesh.png")}
@@ -68,7 +69,7 @@ export default function OnboardingScreen() {
           color={COLORS.purple[500]}
         />
       </View>
-      <Text className="text-3xl font-clash-bold text-black text-center mb-4">
+      <Text className="text-3xl font-clash-semibold text-black text-center mb-4">
         {item.title}
       </Text>
       <Text className="text-base font-clash-regular text-grey-500 text-center leading-6 px-4">
@@ -78,75 +79,79 @@ export default function OnboardingScreen() {
   );
 
   return (
-    <View className="flex-1 bg-white">
-      {/* Background Mesh Overlay */}
-      <View className="absolute inset-0 opacity-5">
-        <Image
-          source={require("../../assets/images/bg-mesh.png")}
-          className="w-full h-full"
-        />
-      </View>
-
-      <View className="flex-row justify-end pt-16 px-6 h-24">
-        {currentIndex < slides.length - 1 ? (
-          <TouchableOpacity onPress={handleStartAuth} className="py-2 px-4">
-            <Text className="text-base font-clash-semibold text-purple-500">
-              Skip
-            </Text>
-          </TouchableOpacity>
-        ) : (
-          <View className="w-12" />
-        )}
-      </View>
-
-      <FlatList
-        ref={flatListRef}
-        data={slides}
-        renderItem={renderItem}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        pagingEnabled
-        bounces={false}
-        onMomentumScrollEnd={(event) => {
-          const index = Math.round(event.nativeEvent.contentOffset.x / width);
-          setCurrentIndex(index);
-        }}
-        keyExtractor={(item) => item.id}
-      />
-
-      <View className="h-44 justify-between px-8 pb-12">
-        <View className="flex-row justify-center items-center mb-8">
-          {slides.map((_, index) => (
-            <View
-              key={index}
-              className={`h-2 rounded-full mx-1 ${
-                currentIndex === index ? "w-8 bg-purple-500" : "w-2 bg-grey-300"
-              }`}
-            />
-          ))}
+    <ScreenView>
+      <View className="flex-1 bg-white">
+        {/* Background Mesh Overlay */}
+        <View className="absolute inset-0 opacity-5">
+          <Image
+            source={require("../../assets/images/bg-mesh.png")}
+            className="w-full h-full"
+          />
         </View>
 
-        {currentIndex === slides.length - 1 ? (
-          <TouchableOpacity
-            className="bg-purple-500 h-16 rounded-2xl justify-center items-center"
-            onPress={handleStartAuth}
-          >
-            <Text className="text-white font-clash-bold text-lg">
-              Get Started
-            </Text>
-          </TouchableOpacity>
-        ) : (
-          <View className="flex-row justify-center">
+        <View className="flex-row justify-end pt-4 px-6 h-24">
+          {currentIndex < slides.length - 1 ? (
+            <TouchableOpacity onPress={handleStartAuth} className="py-2 px-4">
+              <Text className="text-base font-clash-semibold text-purple-500">
+                Skip
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <View className="w-12" />
+          )}
+        </View>
+
+        <FlatList
+          ref={flatListRef}
+          data={slides}
+          renderItem={renderItem}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          pagingEnabled
+          bounces={false}
+          onMomentumScrollEnd={(event) => {
+            const index = Math.round(event.nativeEvent.contentOffset.x / width);
+            setCurrentIndex(index);
+          }}
+          keyExtractor={(item) => item.id}
+        />
+
+        <View className="h-44 justify-between px-8 pb-12">
+          <View className="flex-row justify-center items-center mb-8">
+            {slides.map((_, index) => (
+              <View
+                key={index}
+                className={`h-2 rounded-full mx-1 ${
+                  currentIndex === index
+                    ? "w-8 bg-purple-500"
+                    : "w-2 bg-grey-300"
+                }`}
+              />
+            ))}
+          </View>
+
+          {currentIndex === slides.length - 1 ? (
             <TouchableOpacity
-              className="bg-purple-500 w-16 h-16 rounded-full justify-center items-center shadow-lg shadow-purple-500/30"
+              className="bg-purple-500 h-16 rounded-2xl justify-center items-center"
+              onPress={handleStartAuth}
+            >
+              <Text className="text-white font-clash-bold text-lg">
+                Get Started
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              className="bg-purple-500 h-16 rounded-2xl justify-center items-center"
               onPress={handleNext}
             >
-              <Ionicons name="arrow-forward" size={24} color="#fff" />
+              <Text className="text-white font-clash-bold text-lg">
+                Continue
+              </Text>
             </TouchableOpacity>
-          </View>
-        )}
+          )}
+        </View>
       </View>
-    </View>
+    </ScreenView>
   );
 }
 

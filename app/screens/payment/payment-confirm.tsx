@@ -24,7 +24,7 @@ export default function PaymentConfirmScreen() {
 
   // Mock fraud score
   const fraudScore = 24;
-  const verdict = "CLEAR";
+  const verdict = "PENDING";
 
   const getScoreColor = (score: number) => {
     if (score <= 39) return "#00D68F";
@@ -35,42 +35,72 @@ export default function PaymentConfirmScreen() {
   const handleConfirm = async () => {
     setProcessing(true);
     try {
+      console.log("Initiating transfer...", {
+        recipient_id: params.recipientId,
+        amount: parseInt(params.amount),
+        idempotency_key: params.idempotencyKey,
+        note: params.note,
+        nip_code: "000013",
+      });
+
       const response = await api.post("/transactions/transfer", {
         recipient_id: params.recipientId,
         amount: parseInt(params.amount),
         idempotency_key: params.idempotencyKey,
         note: params.note,
+        nip_code: "000013",
       });
 
-      if (response.data.verdict === "FLAG") {
+      console.log("Transfer response:", response.data);
+
+      const verdict = response.data.verdict;
+
+      if (verdict === "FLAG") {
         router.push({
           pathname: "/screens/payment/flag-warning" as any,
           params: {
-            ...response.data,
+            confirmToken: response.data.confirm_token,
             recipientName: params.recipientName,
             amount: params.amount,
+            fraudScore: response.data.fraud_score?.toString() || "0",
+            fraudReason:
+              response.data.fraud_reason ||
+              "Unusual transaction pattern detected.",
+            expiresAt:
+              response.data.expires_at ||
+              new Date(Date.now() + 5 * 60000).toISOString(),
           },
         });
-      } else {
+      } else if (verdict === "CLEAR" || !verdict) {
         router.push({
           pathname: "/screens/payment/payment-result" as any,
           params: {
             txId: response.data.id,
             success: "true",
-            amount: params.amount,
             recipientName: params.recipientName,
+            amount: params.amount,
           },
         });
+      } else {
+        // Handle DENY or other unknown verdicts
+        throw new Error(
+          response.data.message || `Transaction declined: ${verdict}`,
+        );
       }
     } catch (error: any) {
       console.error("Transfer error", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Something went wrong";
+
       router.push({
         pathname: "/screens/payment/payment-result" as any,
         params: {
           success: "false",
-          error: error.response?.data?.message || "Transfer failed",
-          amount: params.amount,
+          error: errorMessage,
           recipientName: params.recipientName,
+          amount: params.amount,
         },
       });
     } finally {

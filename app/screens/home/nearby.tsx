@@ -1,138 +1,33 @@
+/**
+ * Nearby Users Screen
+ * Uses BLE to discover other PayDrop users in proximity.
+ * Implementation follows the useBLEDiscovery hook for scanning and broadcasting.
+ * NOTE: This feature requires native modules and background modes.
+ * You must run a new EAS Build or prebuild to apply app.json changes.
+ */
+
+import ScreenView from "@/components/layout/ScreenView";
+import { NearbyUser, useBLEDiscovery } from "@/hooks/useBLEDiscovery";
 import { useUserStore } from "@/store/userStore";
+import size from "@/utils/size";
 import { Ionicons } from "@expo/vector-icons";
-import { useMutation } from "@tanstack/react-query";
-import * as Location from "expo-location";
 import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   Animated,
-  Dimensions,
   FlatList,
   Image,
   Linking,
-  Platform,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import BlePeripheral from "react-native-ble-peripheral";
-import { BleManager } from "react-native-ble-plx";
-
-const { width } = Dimensions.get("window");
-
-import ScreenView from "@/components/layout/ScreenView";
-import {
-  broadcastDiscovery,
-  resolveDiscoveryToken,
-  stopDiscoveryBroadcast,
-} from "@/services/user";
-import size from "@/utils/size";
-
-// Initialize BleManager outside component lazily to prevent runtime crashes when native module is missing
-let bleManager: BleManager | null = null;
-
-const getBleManager = (): BleManager | null => {
-  if (!bleManager) {
-    try {
-      bleManager = new BleManager();
-    } catch (e) {
-      console.warn(
-        "BleManager could not be initialized (native module may be missing):",
-        e,
-      );
-      return null;
-    }
-  }
-  return bleManager;
-};
-
-interface NearbyUser {
-  id: string;
-  first_name: string;
-  last_name: string;
-  username: string;
-  avatar_url?: string;
-  trust_score: number;
-  trust_tier: "low" | "medium" | "high";
-  mutual_trust: string;
-  presence: string;
-}
 
 export default function NearbyUsersScreen() {
   const router = useRouter();
-  const accessToken = useUserStore((state) => state.accessToken);
-  const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>([]);
-  const [scanning, setScanning] = useState(true);
-  const [permissionGranted, setPermissionGranted] = useState(true);
-  const [broadcastToken, setBroadcastToken] = useState<string | null>(null);
-  const scannedTokens = useRef<Set<string>>(new Set());
-
-  // Mutations
-  const { mutate: broadcastMutate } = useMutation({
-    mutationFn: broadcastDiscovery,
-    onSuccess: (data) => {
-      console.log("Broadcast registration success:", data);
-      if (data.token) {
-        setBroadcastToken(data.token);
-        startAdvertising(data.token);
-      }
-    },
-    onError: (error) => console.error("Broadcast Error:", error),
-  });
-
-  const { mutate: stopBroadcastMutate } = useMutation({
-    mutationFn: stopDiscoveryBroadcast,
-    onSuccess: () => {
-      stopAdvertising();
-    },
-    onError: (error) => console.error("Stop Broadcast Error:", error),
-  });
-
-  const { mutate: resolveTokenMutate } = useMutation({
-    mutationFn: resolveDiscoveryToken,
-    onSuccess: (data) => {
-      if (data.user) {
-        setNearbyUsers((prev) => {
-          // Avoid duplicates
-          if (prev.some((u) => u.id === data.user.id)) return prev;
-          return [...prev, data.user];
-        });
-        setScanning(false);
-      }
-    },
-    onError: (error) => {
-      console.log("Token resolution failed:", error);
-    },
-  });
-
-  // BLE Advertising Helper
-  const startAdvertising = (token: string) => {
-    try {
-      if (Platform.OS === "web") return;
-      console.log("Starting BLE Advertising for token:", token);
-
-      // Basic Service UUID for PayDrop
-      const SERVICE_UUID = "BBA9E69A-B0A1-4770-80E2-99933B9B1D2A";
-
-      BlePeripheral.setName(token);
-      BlePeripheral.addService(SERVICE_UUID, true);
-      BlePeripheral.start()
-        .then(() => console.log("Advertising started successfully"))
-        .catch((err: any) => console.warn("Advertising start failed:", err));
-    } catch (error) {
-      console.warn("Advertising Setup Error:", error);
-    }
-  };
-
-  const stopAdvertising = () => {
-    try {
-      if (Platform.OS === "web") return;
-      BlePeripheral.stop();
-      console.log("Advertising stopped");
-    } catch (error) {
-      console.warn("Advertising Stop Error:", error);
-    }
-  };
+  const user = useUserStore((state) => state.user);
+  const { nearbyUsers, isScanning, isAdvertising, error, refreshPermissions } =
+    useBLEDiscovery();
 
   // Animation refs
   const pulseAnim1 = useRef(new Animated.Value(0)).current;
@@ -143,108 +38,7 @@ export default function NearbyUsersScreen() {
   const opacityAnim3 = useRef(new Animated.Value(0.6)).current;
 
   useEffect(() => {
-    let isMounted = true;
-
-    const checkPermissions = async () => {
-      try {
-        if (Platform.OS === "android") {
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          if (status !== "granted") {
-            setPermissionGranted(false);
-            return false;
-          }
-        }
-        // BleManager usually handles its own prompts on first scan/state check
-        setPermissionGranted(true);
-        return true;
-      } catch (error) {
-        console.error("Permission check failed", error);
-        return false;
-      }
-    };
-
-    const startBLEScan = async () => {
-      try {
-        const manager = getBleManager();
-        if (!manager) {
-          throw new Error("BleManager native module is not available");
-        }
-
-        // Wait for Bluetooth to be powered on
-        const state = await manager.state();
-        if (state !== "PoweredOn") {
-          console.warn("Bluetooth is not PoweredOn. Current state:", state);
-          return;
-        }
-
-        console.log("Starting BLE Scan...");
-        manager.startDeviceScan(
-          null,
-          { allowDuplicates: false },
-          (error, device) => {
-            if (error) {
-              console.log("BLE Scan Error:", error);
-              return;
-            }
-
-            const token = device?.localName;
-            if (token && token.startsWith("PD_")) {
-              console.log("Found PayDrop device token:", token);
-
-              // Ignore weak signals
-              if (device.rssi && device.rssi < -85) return;
-
-              if (scannedTokens.current.has(token)) return;
-              scannedTokens.current.add(token);
-
-              resolveTokenMutate(token);
-            }
-          },
-        );
-      } catch (error) {
-        console.warn("BLE Scan Start Error:", error);
-      }
-    };
-
-    const startDiscovery = async () => {
-      const hasPermissions = await checkPermissions();
-      if (!hasPermissions) return;
-
-      try {
-        broadcastMutate();
-        startBLEScan();
-
-        // Fallback mock data
-        setTimeout(() => {
-          if (isMounted && nearbyUsers.length === 0) {
-            setNearbyUsers([
-              {
-                id: "1",
-                first_name: "Shade",
-                last_name: "Akin",
-                username: "@shade_akin",
-                avatar_url: "https://i.pravatar.cc/100?img=1",
-                trust_score: 92,
-                trust_tier: "high",
-                mutual_trust: "Shade + 12 others",
-                presence: "Faculty Building",
-              },
-            ]);
-            setScanning(false);
-          }
-        }, 8000);
-      } catch (error) {
-        console.error("Discovery setup error", error);
-        setScanning(false);
-      }
-    };
-
-    if (permissionGranted && accessToken) {
-      startDiscovery();
-    }
-
-    // Start pulse animations
-    const startPulse = () => {
+    if (isScanning) {
       const createPulse = (
         scaleAnim: Animated.Value,
         opacityAnim: Animated.Value,
@@ -282,37 +76,20 @@ export default function NearbyUsersScreen() {
       };
 
       createPulse(pulseAnim1, opacityAnim1, 0);
-      createPulse(pulseAnim2, opacityAnim2, 200);
-      createPulse(pulseAnim3, opacityAnim3, 400);
-    };
+      createPulse(pulseAnim2, opacityAnim2, 400);
+      createPulse(pulseAnim3, opacityAnim3, 800);
+    } else {
+      pulseAnim1.stopAnimation();
+      pulseAnim2.stopAnimation();
+      pulseAnim3.stopAnimation();
+    }
+  }, [isScanning]);
 
-    startPulse();
-
-    return () => {
-      isMounted = false;
-      if (bleManager) {
-        try {
-          bleManager.stopDeviceScan();
-        } catch (e) {
-          // ignore
-        }
-      }
-
-      if (accessToken) {
-        stopBroadcastMutate();
-      }
-    };
-  }, [permissionGranted, accessToken]);
-
-  const handlePay = (user: NearbyUser) => {
+  const handlePay = (targetUser: NearbyUser) => {
     router.push({
       pathname: "/screens/payment/recipient-preview" as any,
-      params: { user: JSON.stringify(user) },
+      params: { user: JSON.stringify(targetUser) },
     });
-  };
-
-  const handleScanQR = () => {
-    router.push("/screens/home/qr-scanner");
   };
 
   const handleOpenSettings = () => {
@@ -333,20 +110,28 @@ export default function NearbyUsersScreen() {
   };
 
   const renderNearbyUser = ({ item }: { item: NearbyUser }) => (
-    <View className="bg-[#F3F4F6] rounded-[16px] p-4 mb-2 mx-6">
+    <TouchableOpacity
+      onPress={() => handlePay(item)}
+      activeOpacity={0.7}
+      className="bg-[#F3F4F6] rounded-[24px] p-4 mb-3 mx-6 border border-grey-100"
+    >
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center flex-1">
           <Image
-            source={{ uri: item.avatar_url || "https://i.pravatar.cc/100" }}
-            className="rounded-full mr-3"
+            source={{
+              uri:
+                item.avatar_url ||
+                `https://ui-avatars.com/api/?name=${item.first_name}+${item.last_name}&background=random`,
+            }}
+            className="rounded-full mr-4"
             style={{
-              width: size.width(50),
-              height: size.height(50),
+              width: size.width(56),
+              height: size.height(56),
             }}
           />
           <View className="flex-1">
             <View className="flex-row items-center">
-              <Text className="text-[#1A1A1A] font-clash-semibold text-[16px] mr-2">
+              <Text className="text-[#1A1A1A] font-clash-semibold text-[17px] mr-2">
                 {item.first_name} {item.last_name}
               </Text>
               <View
@@ -363,129 +148,175 @@ export default function NearbyUsersScreen() {
                 </Text>
               </View>
             </View>
-            <Text className="text-[#6B7280] font-clash-regular text-[13px]">
-              {item.username}
+            <Text className="text-[#6B7280] font-clash-regular text-[14px]">
+              @{item.username}
             </Text>
-            <Text className="text-[#6B7280] font-clash-regular text-[12px] mt-1">
-              👥 Trusted by {item.mutual_trust}
-            </Text>
-            <Text className="text-purple-300 font-clash-regular text-[12px] mt-0.5">
-              📍 {item.presence}
-            </Text>
+            <View className="flex-row items-center mt-1">
+              <Text className="text-[#6B7280] font-clash-medium text-[12px]">
+                👥 {item.mutual_trust}
+              </Text>
+              <Text className="text-purple-500 font-clash-medium text-[12px] ml-3">
+                📍 {item.presence}
+              </Text>
+            </View>
           </View>
         </View>
-        <TouchableOpacity
-          onPress={() => handlePay(item)}
-          className="bg-purple-300 rounded-full px-4 py-2"
-        >
-          <Text className="text-white font-clash-semibold text-[14px]">
-            Pay
-          </Text>
-        </TouchableOpacity>
+        <View className="bg-purple-500 rounded-full w-10 h-10 items-center justify-center">
+          <Ionicons name="arrow-forward" size={20} color="white" />
+        </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
     <ScreenView>
       <View className="flex-1 bg-white">
         {/* Header */}
-        <View className="px-6 pt-4 pb-4 bg-white">
-          <View className="flex-row justify-between items-center">
-            <Text className="text-black font-clash-semibold text-[24px]">
+        <View className="px-6 pt-4 pb-4 bg-white flex-row justify-between items-center">
+          <View>
+            <Text className="text-black font-clash-semibold text-[28px]">
               Nearby
             </Text>
-            <TouchableOpacity onPress={() => router.back()}>
-              <Ionicons name="close" size={28} color="#1A1A1A" />
-            </TouchableOpacity>
+            <View className="flex-row items-center">
+              <View
+                className={`w-2 h-2 rounded-full mr-2 ${isAdvertising ? "bg-green-500" : "bg-red-500"}`}
+              />
+              <Text className="text-[#6B7280] font-clash-medium text-[12px]">
+                {isAdvertising ? "Discoverable" : "Not Discoverable"}
+              </Text>
+            </View>
           </View>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className="w-10 h-10 bg-grey-50 rounded-full items-center justify-center border border-grey-100"
+          >
+            <Ionicons name="close" size={24} color="#1A1A1A" />
+          </TouchableOpacity>
         </View>
 
         <FlatList
-          data={scanning ? [] : nearbyUsers}
+          data={nearbyUsers}
           keyExtractor={(item) => item.id}
           renderItem={renderNearbyUser}
           ListHeaderComponent={
-            <View className="items-center justify-center py-10">
-              {/* BLE Animation */}
-              <View className="w-60 h-60 items-center justify-center mb-6">
-                <Animated.View
-                  className="absolute rounded-full border-[1.5px] border-[#00D68F]"
-                  style={{
-                    width: 200,
-                    height: 200,
-                    transform: [{ scale: pulseAnim1 }],
-                    opacity: opacityAnim1,
-                  }}
-                />
-                <Animated.View
-                  className="absolute rounded-full border-[1.5px] border-[#00D68F]"
-                  style={{
-                    width: 200,
-                    height: 200,
-                    transform: [{ scale: pulseAnim2 }],
-                    opacity: opacityAnim2,
-                  }}
-                />
-                <Animated.View
-                  className="absolute rounded-full border-[1.5px] border-[#00D68F]"
-                  style={{
-                    width: 200,
-                    height: 200,
-                    transform: [{ scale: pulseAnim3 }],
-                    opacity: opacityAnim3,
-                  }}
-                />
-                <Image
-                  source={{ uri: "https://i.pravatar.cc/100" }}
-                  className="w-10 h-10 rounded-full"
-                />
+            <View className="items-center justify-center py-8">
+              {/* Pulsing Animation Container */}
+              <View className="w-64 h-64 items-center justify-center mb-8 relative">
+                {isScanning && (
+                  <>
+                    <Animated.View
+                      className="absolute rounded-full border-[2px] border-purple-500/30"
+                      style={{
+                        width: 220,
+                        height: 220,
+                        transform: [{ scale: pulseAnim1 }],
+                        opacity: opacityAnim1,
+                      }}
+                    />
+                    <Animated.View
+                      className="absolute rounded-full border-[2px] border-purple-500/30"
+                      style={{
+                        width: 220,
+                        height: 220,
+                        transform: [{ scale: pulseAnim2 }],
+                        opacity: opacityAnim2,
+                      }}
+                    />
+                    <Animated.View
+                      className="absolute rounded-full border-[2px] border-purple-500/30"
+                      style={{
+                        width: 220,
+                        height: 220,
+                        transform: [{ scale: pulseAnim3 }],
+                        opacity: opacityAnim3,
+                      }}
+                    />
+                  </>
+                )}
+
+                <View className="w-24 h-24 rounded-full bg-white shadow-xl items-center justify-center border-4 border-purple-50">
+                  <Image
+                    source={{
+                      uri: user?.avatar_url || "https://i.pravatar.cc/100",
+                    }}
+                    className="w-20 h-20 rounded-full"
+                  />
+                </View>
+
+                {isScanning && (
+                  <View className="absolute bottom-4 bg-purple-500 px-3 py-1 rounded-full shadow-sm">
+                    <Text className="text-white font-clash-bold text-[10px]">
+                      SCANNING
+                    </Text>
+                  </View>
+                )}
               </View>
 
-              <Text className="text-[#6B7280] font-clash-regular text-[14px] mb-4">
-                {scanning
-                  ? "Looking for nearby users…"
-                  : "Tap on a user to pay"}
-              </Text>
-
-              <TouchableOpacity onPress={handleScanQR}>
-                <Text className="text-[#6B7280] rounded-full bg-[#F3F4F6] px-4 py-2 font-clash-medium text-[14px]">
-                  Scan QR instead
+              <View className="px-10 items-center">
+                <Text className="text-[#1A1A1A] font-clash-semibold text-[18px] text-center mb-2">
+                  {isScanning ? "Finding people nearby" : "Search completed"}
                 </Text>
-              </TouchableOpacity>
+                <Text className="text-[#6B7280] font-clash-regular text-[14px] text-center">
+                  {isScanning
+                    ? "Make sure others have this screen open to be discovered."
+                    : "No more users found. Tap below to scan again."}
+                </Text>
+              </View>
             </View>
           }
           ListEmptyComponent={
-            !scanning ? (
-              <View className="items-center justify-center py-12 px-10">
-                <Ionicons name="people-outline" size={48} color="#9CA3AF" />
-                <Text className="text-[#6B7280] font-clash-regular text-[14px] mt-4 text-center">
-                  No one nearby — ask them to open PayDrop
+            !isScanning ? (
+              <View className="items-center justify-center py-10 px-10">
+                <View className="w-16 h-16 bg-grey-50 rounded-full items-center justify-center mb-4">
+                  <Ionicons name="people-outline" size={32} color="#9CA3AF" />
+                </View>
+                <Text className="text-[#6B7280] font-clash-medium text-[14px] text-center">
+                  No one nearby yet.
                 </Text>
+                <TouchableOpacity
+                  onPress={refreshPermissions}
+                  className="mt-6 border border-purple-200 px-6 py-2 rounded-full"
+                >
+                  <Text className="text-purple-500 font-clash-bold">
+                    Try Again
+                  </Text>
+                </TouchableOpacity>
               </View>
             ) : null
           }
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={{ paddingBottom: 100 }}
         />
 
-        {!permissionGranted && (
-          <View className="absolute inset-0 bg-white items-center justify-center px-10">
-            <Ionicons name="bluetooth-outline" size={64} color="#9CA3AF" />
-            <Text className="text-[#1A1A1A] font-clash-bold text-[20px] mb-2 mt-4">
-              Bluetooth Permission Required
+        {/* Error / Permission Overlay */}
+        {error && (
+          <View className="absolute inset-0 bg-white/95 items-center justify-center px-10 z-50">
+            <View className="w-20 h-20 bg-red-50 rounded-full items-center justify-center mb-6">
+              <Ionicons name="alert-circle-outline" size={48} color="#FF6B6B" />
+            </View>
+            <Text className="text-[#1A1A1A] font-clash-semibold text-[22px] mb-3 text-center">
+              {error.includes("permissions")
+                ? "Permissions Required"
+                : "Bluetooth Issue"}
             </Text>
-            <Text className="text-[#6B7280] font-clash-regular text-[14px] text-center mb-8">
-              To find nearby users, we need Bluetooth access to scan for
-              devices.
+            <Text className="text-[#6B7280] font-clash-regular text-[15px] text-center mb-10 leading-6">
+              {error}
             </Text>
             <TouchableOpacity
-              onPress={handleOpenSettings}
-              className="bg-[#00D68F] rounded-full px-8 py-3 w-full items-center"
+              onPress={
+                error.includes("permissions")
+                  ? handleOpenSettings
+                  : refreshPermissions
+              }
+              className="bg-purple-500 rounded-full py-4 w-full items-center shadow-lg shadow-purple-200"
             >
-              <Text className="text-black font-clash-bold text-[16px]">
-                Open Settings
+              <Text className="text-white font-clash-semibold text-[16px]">
+                {error.includes("permissions") ? "Open Settings" : "Retry"}
               </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => router.back()} className="mt-6">
+              <Text className="text-[#9CA3AF] font-clash-medium">Go Back</Text>
             </TouchableOpacity>
           </View>
         )}

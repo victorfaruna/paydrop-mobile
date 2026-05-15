@@ -92,9 +92,8 @@ export default function HomeScreen() {
     retry: 1,
   });
 
-  const user = accessToken && userData ? userData?.data : DEFAULT_USER;
-
-  const transactions: Transaction[] = transactionsData?.transactions ?? [];
+  const user =
+    accessToken && userData ? userData?.data || userData : DEFAULT_USER;
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -113,12 +112,12 @@ export default function HomeScreen() {
   const refreshing = isRefreshing || refetchingUser || refetchingTransactions;
   const error = userError || transactionsError;
 
-  const walletBalance = user?.wallet?.balance ?? 0;
+  const walletBalance = user?.wallet_balance ?? user?.balance ?? 0;
+  const transactions: Transaction[] =
+    transactionsData?.transactions ??
+    transactionsData?.data?.transactions ??
+    [];
   const recentTransactions = transactions.slice(0, 3);
-
-  const formatNaira = (value: number) => {
-    return `₦${value.toLocaleString("en-NG")}`;
-  };
 
   return (
     <>
@@ -212,10 +211,10 @@ export default function HomeScreen() {
               <Ionicons name="sparkles-outline" size={24} color="#F97316" />
             </View>
             <View className="flex-1">
-              <Text className="text-black font-clash-semibold text-base">
+              <Text className="text-black font-clash-semibold text-xl">
                 Stay on top of payments
               </Text>
-              <Text className="text-grey-500 font-clash-regular text-xs mt-0.5">
+              <Text className="text-grey-500 font-clash-regular text-sm mt-0.5">
                 Review recent Naira transactions here.
               </Text>
             </View>
@@ -241,23 +240,29 @@ export default function HomeScreen() {
             </Text>
           ) : error ? (
             <Text className="text-red-500 font-clash-regular text-base">
-              {String(error)}
+              {typeof error === "object" && error !== null
+                ? (error as any).message ||
+                  (error as any).error ||
+                  JSON.stringify(error)
+                : String(error)}
             </Text>
           ) : recentTransactions.length === 0 ? (
             <Text className="text-grey-500 font-clash-regular text-base">
               No recent transactions yet.
             </Text>
           ) : (
-            recentTransactions.map((transaction) => (
-              <TransactionItem
-                key={transaction.id}
-                transaction={transaction}
-                onPress={() => {
-                  setSelectedTxId(transaction.id);
-                  setIsFraudModalVisible(true);
-                }}
-              />
-            ))
+            recentTransactions.map((transaction) =>
+              transaction ? (
+                <TransactionItem
+                  key={transaction.id}
+                  transaction={transaction}
+                  onPress={() => {
+                    setSelectedTxId(transaction.id);
+                    setIsFraudModalVisible(true);
+                  }}
+                />
+              ) : null,
+            )
           )}
         </View>
       </ScrollView>

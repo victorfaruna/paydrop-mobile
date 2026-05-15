@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "PayDrop",
-    "slug": "paydrop-mobile",
+    "slug": "paydrop",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "paydropmobile",
+    "scheme": "paydrop",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -15,14 +15,20 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.victorfaruna.paydropmobile",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSBluetoothAlwaysUsageDescription": "PayDrop uses Bluetooth to find nearby users for seamless payments.",
         "NSBluetoothPeripheralUsageDescription": "PayDrop uses Bluetooth to make your device discoverable to nearby users.",
         "NSCameraUsageDescription": "PayDrop needs access to your camera to scan QR codes and take photos.",
-        "NSMicrophoneUsageDescription": "PayDrop needs access to your microphone for video features."
-      }
+        "NSMicrophoneUsageDescription": "PayDrop needs access to your microphone for video features.",
+        "UIBackgroundModes": [
+          "bluetooth-central",
+          "bluetooth-peripheral",
+          "bluetooth-central",
+          "bluetooth-peripheral"
+        ]
+      },
+      "bundleIdentifier": "com.victorfaruna1.paydrop"
     },
     "android": {
       "adaptiveIcon": {
@@ -31,15 +37,17 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.victorfaruna.paydropmobile",
       "permissions": [
         "android.permission.BLUETOOTH_SCAN",
         "android.permission.BLUETOOTH_ADVERTISE",
         "android.permission.BLUETOOTH_CONNECT",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
-      ]
+        "android.permission.RECORD_AUDIO",
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN"
+      ],
+      "package": "com.victorfaruna1.paydrop"
     },
     "web": {
       "bundler": "metro",
@@ -52,7 +60,10 @@
         "react-native-ble-plx",
         {
           "isBackgroundEnabled": true,
-          "modes": ["peripheral", "central"],
+          "modes": [
+            "peripheral",
+            "central"
+          ],
           "bluetoothAlwaysPermission": "Allow PayDrop to use Bluetooth to find nearby users."
         }
       ],
@@ -69,6 +80,15 @@
         {
           "photosPermission": "Allow PayDrop to access your photos."
         }
+      ],
+      "expo-secure-store",
+      [
+        "react-native-permissions",
+        {
+          "iosPermissions": [
+            "Bluetooth"
+          ]
+        }
       ]
     ],
     "experiments": {
@@ -77,8 +97,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "68e4e544-179c-4f12-85e1-8af2f6a64f8c"
+        "projectId": "973ef257-fb78-4d28-845a-4a27f142dfc7"
       }
-    }
+    },
+    "owner": "victorfaruna"
   }
 }

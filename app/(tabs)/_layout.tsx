@@ -42,7 +42,7 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="search"
         options={{
           title: "Search",
@@ -50,7 +50,7 @@ export default function TabLayout() {
             <TabBarIcon name="search-outline" color={color} />
           ),
         }}
-      />
+      /> */}
       <Tabs.Screen
         name="profile"
         options={{

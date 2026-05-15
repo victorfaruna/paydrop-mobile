@@ -29,9 +29,9 @@ export const getQrCode = async () => {
   }
 };
 
-export const broadcastDiscovery = async () => {
+export const broadcastDiscovery = async ({ token }: { token: string }) => {
   try {
-    const response = await api.post("/discover/broadcast");
+    const response = await api.post("/discover/broadcast", { token });
     return response.data;
   } catch (error: any) {
     throw error.response?.data || error.message;
@@ -47,9 +47,9 @@ export const stopDiscoveryBroadcast = async () => {
   }
 };
 
-export const resolveDiscoveryToken = async (token: string) => {
+export const resolveDiscoveryTokens = async (tokens: string[]) => {
   try {
-    const response = await api.post("/discover/resolve", { token });
+    const response = await api.post("/discover/resolve", { tokens });
     return response.data;
   } catch (error: any) {
     throw error.response?.data || error.message;
