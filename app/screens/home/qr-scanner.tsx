@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -69,24 +69,21 @@ export default function QRScannerScreen() {
     },
   });
 
-  const handleBarCodeScanned = useCallback(
-    (scanResult: { type: string; data: string }) => {
-      // Guard: only process once
-      if (isProcessingRef.current || resolving) return;
-      isProcessingRef.current = true;
+  const handleBarCodeScanned = (scanResult: { type: string; data: string }) => {
+    // Guard: only process once
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
 
-      console.log("[QR Scanner] Scanned!", scanResult.type, scanResult.data);
+    console.log("[QR Scanner] Scanned!", scanResult.type, scanResult.data);
 
-      // Haptic feedback
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
-        () => {},
-      );
+    // Haptic feedback
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+      () => {},
+    );
 
-      // Pass the exact scanned data as the token
-      resolveMutate([scanResult.data]);
-    },
-    [resolving, resolveMutate],
-  );
+    // Pass the exact scanned data as the token
+    resolveMutate([scanResult.data]);
+  };
 
   const handleManualResolve = () => {
     if (!manualCode || resolving) return;

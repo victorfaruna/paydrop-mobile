@@ -15,8 +15,13 @@ import {
 } from "@/services/user";
 import * as Crypto from "expo-crypto";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, AppStateStatus, Platform } from "react-native";
-import BLEAdvertiser from "react-native-ble-advertiser";
+import {
+  AppState,
+  AppStateStatus,
+  NativeModules,
+  PermissionsAndroid,
+  Platform,
+} from "react-native";
 import { BleManager } from "react-native-ble-plx";
 import {
   check,
@@ -25,6 +30,59 @@ import {
   request,
   RESULTS,
 } from "react-native-permissions";
+
+// Package exports NativeModules.BLEAdvertiser directly (no .default)
+const BLEAdvertiser: typeof NativeModules.BLEAdvertiser | null =
+  NativeModules.BLEAdvertiser ?? null;
+
+const waitForBleAdvertiserReady = async (timeoutMs = 5000) => {
+  if (!BLEAdvertiser?.getAdapterState) return;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const state = await BLEAdvertiser.getAdapterState();
+      if (state === "STATE_ON") return;
+    } catch {
+      // Adapter still initializing
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+};
+
+const startNativeAdvertising = async (token: string) => {
+  if (!BLEAdvertiser?.broadcast) {
+    console.warn("[BLE] BLEAdvertiser native module not linked");
+    return false;
+  }
+
+  // iOS: setCompanyId only initializes CBPeripheralManager (company ID unused).
+  // Android: required manufacturer company ID before broadcast.
+  if (Platform.OS === "android" && BLEAdvertiser.setCompanyId) {
+    BLEAdvertiser.setCompanyId(0x004c);
+  } else if (Platform.OS === "ios" && BLEAdvertiser.setCompanyId) {
+    BLEAdvertiser.setCompanyId(0);
+    await waitForBleAdvertiserReady();
+  }
+
+  const options = {
+    advertiseMode: 2,
+    txPowerLevel: 3,
+    connectable: false,
+    includeDeviceName: false,
+  };
+
+  const maxAttempts = Platform.OS === "ios" ? 6 : 1;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      await BLEAdvertiser.broadcast(token, [], options);
+      return true;
+    } catch (err) {
+      if (attempt === maxAttempts - 1) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    }
+  }
+  return false;
+};
 
 // Singleton BleManager for scanning
 const bleManager = new BleManager();
@@ -61,27 +119,40 @@ export const useBLEDiscovery = (
 
   // ─── Permissions ───────────────────────────────────────────────
   const requestPermissions = async () => {
-    const permissions: Permission[] = Platform.select({
-      ios: [PERMISSIONS.IOS.BLUETOOTH],
-      android: [
-        PERMISSIONS.ANDROID.BLUETOOTH_SCAN,
-        PERMISSIONS.ANDROID.BLUETOOTH_ADVERTISE,
-        PERMISSIONS.ANDROID.BLUETOOTH_CONNECT,
-        PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
-      ],
-      default: [],
-    });
+    if (Platform.OS === "android") {
+      try {
+        const granted = await PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_ADVERTISE,
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        ]);
 
-    for (const permission of permissions) {
-      const result = await check(permission);
-      if (result !== RESULTS.GRANTED) {
-        const requestResult = await request(permission);
-        if (
-          requestResult !== RESULTS.GRANTED &&
-          requestResult !== RESULTS.LIMITED
-        ) {
+        const allGranted = Object.values(granted).every(
+          (status) => status === PermissionsAndroid.RESULTS.GRANTED,
+        );
+
+        if (!allGranted) {
+          console.warn("[BLE] Some Android permissions denied:", granted);
           return false;
         }
+      } catch (err) {
+        console.error("[BLE] Permission request error:", err);
+        return false;
+      }
+      return true;
+    }
+
+    const permissions: Permission[] = [PERMISSIONS.IOS.BLUETOOTH];
+    for (const permission of permissions) {
+      const result = await check(permission);
+      if (result === RESULTS.GRANTED || result === RESULTS.LIMITED) continue;
+      const requestResult = await request(permission);
+      if (
+        requestResult !== RESULTS.GRANTED &&
+        requestResult !== RESULTS.LIMITED
+      ) {
+        return false;
       }
     }
     return true;
@@ -170,22 +241,29 @@ export const useBLEDiscovery = (
 
         // Broadcast token via BLE as a service UUID
         try {
-          await BLEAdvertiser.setCompanyId(0x004c);
-          await BLEAdvertiser.broadcast(tokenRef.current, [], {
-            advertiseMode:
-              (BLEAdvertiser as any).ADVERTISE_MODE_LOW_LATENCY || 2,
-            txPowerLevel:
-              (BLEAdvertiser as any).ADVERTISE_TX_POWER_HIGH || 3,
-            connectable: false,
-            includeDeviceName: false,
-          });
-          setIsAdvertising(true);
-          setError(null);
-          console.log("[BLE] Advertising started with token:", tokenRef.current);
+          const nativeStarted = await startNativeAdvertising(
+            tokenRef.current,
+          );
+          if (nativeStarted) {
+            console.log(
+              "[BLE] Advertising started with token:",
+              tokenRef.current,
+            );
+            setIsAdvertising(true);
+            setError(null);
+          } else {
+            setIsAdvertising(false);
+            setError(
+              "Bluetooth advertising is unavailable. Rebuild the app with native BLE support.",
+            );
+          }
         } catch (err: any) {
           console.warn("[BLE] Advertising Failed", err);
-          setError(err.message || "Failed to start BLE advertising");
           setIsAdvertising(false);
+          setError(
+            err?.message ||
+              "Failed to start Bluetooth advertising. Check Bluetooth is on.",
+          );
         }
       }
 
@@ -254,7 +332,7 @@ export const useBLEDiscovery = (
       bleManager.stopDeviceScan();
       setIsScanning(false);
 
-      await BLEAdvertiser.stopBroadcast().catch(() => {});
+      if (BLEAdvertiser) await BLEAdvertiser.stopBroadcast().catch(() => {});
       setIsAdvertising(false);
 
       await stopDiscoveryBroadcast().catch(() => {});

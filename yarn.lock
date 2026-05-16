@@ -4689,6 +4689,11 @@ react-native-ble-advertiser@^0.0.17:
   resolved "https://registry.npmjs.org/react-native-ble-advertiser/-/react-native-ble-advertiser-0.0.17.tgz"
   integrity sha512-26kWCC/xyo/dtXQSD52vFqPXzD0xKWuyBIZR7pmXLlqDzVQR+N80sqKVweCt7OmPhkRloQ0z5D0Q7Jnbw6pvmA==
 
+react-native-ble-manager@^12.4.5:
+  version "12.4.5"
+  resolved "https://registry.npmjs.org/react-native-ble-manager/-/react-native-ble-manager-12.4.5.tgz"
+  integrity sha512-vVo4Ob9gdGOAjJnGr23ebZiUp2/4YBk9I7rAtFKguEdd5vu5ZPHQNXAz3GDV0bcaQ2Huepd1I4rwpmWQ6cMLxg==
+
 react-native-ble-peripheral@^2.0.1:
   version "2.0.1"
   resolved "https://registry.npmjs.org/react-native-ble-peripheral/-/react-native-ble-peripheral-2.0.1.tgz"
