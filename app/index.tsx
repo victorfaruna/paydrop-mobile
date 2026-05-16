@@ -9,7 +9,7 @@ export default function SplashScreen() {
 
   ///...................
   const { user } = useUserStore();
-  const { onboardingCompleted } = useAppState();
+  const { onboardingCompleted, hasSeenIntro } = useAppState();
 
   ///...................
   useEffect(() => {
@@ -19,8 +19,10 @@ export default function SplashScreen() {
         router.replace("/(tabs)/home");
       } else if (user && !onboardingCompleted) {
         router.replace("/(auth)/register");
-      } else {
+      } else if (!hasSeenIntro) {
         router.replace("/(auth)");
+      } else {
+        router.replace("/(auth)/login");
       }
     }, 2000);
 

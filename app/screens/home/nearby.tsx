@@ -26,8 +26,8 @@ import {
 export default function NearbyUsersScreen() {
   const router = useRouter();
   const user = useUserStore((state) => state.user);
-  const { nearbyUsers, isScanning, isAdvertising, error, refreshPermissions } =
-    useBLEDiscovery();
+  const { nearbyUsers, isScanning, error, refreshPermissions } =
+    useBLEDiscovery("scan");
 
   // Animation refs
   const pulseAnim1 = useRef(new Animated.Value(0)).current;
@@ -97,7 +97,7 @@ export default function NearbyUsersScreen() {
   };
 
   const getTrustColor = (tier: string) => {
-    switch (tier) {
+    switch (tier?.toLowerCase()) {
       case "high":
         return "#00D68F";
       case "medium":
@@ -144,7 +144,7 @@ export default function NearbyUsersScreen() {
                   className="font-clash-medium text-[10px]"
                   style={{ color: getTrustColor(item.trust_tier) }}
                 >
-                  {item.trust_tier.toUpperCase()}
+                  {(item.trust_tier || "UNKNOWN").toUpperCase()}
                 </Text>
               </View>
             </View>
@@ -152,12 +152,16 @@ export default function NearbyUsersScreen() {
               @{item.username}
             </Text>
             <View className="flex-row items-center mt-1">
-              <Text className="text-[#6B7280] font-clash-medium text-[12px]">
-                👥 {item.mutual_trust}
-              </Text>
-              <Text className="text-purple-500 font-clash-medium text-[12px] ml-3">
-                📍 {item.presence}
-              </Text>
+              {item.mutual_trust ? (
+                <Text className="text-[#6B7280] font-clash-medium text-[12px]">
+                  👥 {item.mutual_trust}
+                </Text>
+              ) : null}
+              {(item.presence || item.distance_signal) ? (
+                <Text className="text-purple-500 font-clash-medium text-[12px] ml-3">
+                  📍 {item.presence || (item.distance_signal === "NEAR" ? "Nearby" : item.distance_signal)}
+                </Text>
+              ) : null}
             </View>
           </View>
         </View>
@@ -175,23 +179,31 @@ export default function NearbyUsersScreen() {
         <View className="px-6 pt-4 pb-4 bg-white flex-row justify-between items-center">
           <View>
             <Text className="text-black font-clash-semibold text-[28px]">
-              Nearby
+              Send Money
             </Text>
             <View className="flex-row items-center">
               <View
-                className={`w-2 h-2 rounded-full mr-2 ${isAdvertising ? "bg-green-500" : "bg-red-500"}`}
+                className={`w-2 h-2 rounded-full mr-2 ${isScanning ? "bg-green-500" : "bg-red-500"}`}
               />
               <Text className="text-[#6B7280] font-clash-medium text-[12px]">
-                {isAdvertising ? "Discoverable" : "Not Discoverable"}
+                {isScanning ? "Scanning for users..." : "Scanner paused"}
               </Text>
             </View>
           </View>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            className="w-10 h-10 bg-grey-50 rounded-full items-center justify-center border border-grey-100"
-          >
-            <Ionicons name="close" size={24} color="#1A1A1A" />
-          </TouchableOpacity>
+          <View className="flex-row items-center">
+            <TouchableOpacity
+              onPress={() => router.push("/screens/home/qr-scanner" as any)}
+              className="w-10 h-10 bg-purple-50 rounded-full items-center justify-center border border-purple-100 mr-3"
+            >
+              <Ionicons name="qr-code-outline" size={20} color="#8B5CF6" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              className="w-10 h-10 bg-grey-50 rounded-full items-center justify-center border border-grey-100"
+            >
+              <Ionicons name="close" size={24} color="#1A1A1A" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <FlatList

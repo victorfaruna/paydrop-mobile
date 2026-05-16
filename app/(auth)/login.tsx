@@ -92,18 +92,19 @@ export default function LoginScreen() {
                   placeholder="812 345 6789"
                   placeholderTextColor="#9CA3AF"
                   keyboardType="phone-pad"
+                  maxLength={10}
                   className="flex-1 h-full font-clash-regular text-black"
                   value={phone}
-                  onChangeText={setPhone}
+                  onChangeText={(text) => setPhone(text.replace(/\D/g, ""))}
                 />
               </View>
 
               <TouchableOpacity
                 className={`h-16 rounded-2xl justify-center items-center ${
-                  phone && !isPending ? "bg-purple-500" : "bg-purple-300"
+                  phone.length === 10 && !isPending ? "bg-purple-500" : "bg-purple-300"
                 }`}
                 onPress={handleSubmit}
-                disabled={!phone || isPending}
+                disabled={phone.length !== 10 || isPending}
               >
                 {isPending ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />

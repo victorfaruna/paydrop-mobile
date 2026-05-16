@@ -16,7 +16,6 @@ export default function PaymentConfirmScreen() {
     recipientAvatar: string;
     amount: string;
     note: string;
-    idempotencyKey: string;
   }>();
 
   const accessToken = useUserStore((state) => state.accessToken);
@@ -38,7 +37,6 @@ export default function PaymentConfirmScreen() {
       console.log("Initiating transfer...", {
         recipient_id: params.recipientId,
         amount: parseInt(params.amount),
-        idempotency_key: params.idempotencyKey,
         note: params.note,
         nip_code: "000013",
       });
@@ -46,45 +44,48 @@ export default function PaymentConfirmScreen() {
       const response = await api.post("/transactions/transfer", {
         recipient_id: params.recipientId,
         amount: parseInt(params.amount),
-        idempotency_key: params.idempotencyKey,
         note: params.note,
         nip_code: "000013",
       });
 
       console.log("Transfer response:", response.data);
 
-      const verdict = response.data.verdict;
+      const transferData = response.data?.data || response.data;
+      const verdict = transferData.verdict;
 
       if (verdict === "FLAG") {
         router.push({
           pathname: "/screens/payment/flag-warning" as any,
           params: {
-            confirmToken: response.data.confirm_token,
+            confirmToken: transferData.confirm_token,
             recipientName: params.recipientName,
             amount: params.amount,
-            fraudScore: response.data.fraud_score?.toString() || "0",
+            fraudScore: transferData.fraud_score?.toString() || "0",
             fraudReason:
-              response.data.fraud_reason ||
+              transferData.fraud_reason ||
               "Unusual transaction pattern detected.",
             expiresAt:
-              response.data.expires_at ||
+              transferData.expires_at ||
               new Date(Date.now() + 5 * 60000).toISOString(),
           },
         });
-      } else if (verdict === "CLEAR" || !verdict) {
+      } else if (verdict === "ALLOW" || !verdict) {
         router.push({
           pathname: "/screens/payment/payment-result" as any,
           params: {
-            txId: response.data.id,
+            txId: transferData.id || transferData.squad_ref,
             success: "true",
             recipientName: params.recipientName,
             amount: params.amount,
           },
         });
-      } else {
-        // Handle DENY or other unknown verdicts
+      } else if (verdict === "BLOCK") {
         throw new Error(
-          response.data.message || `Transaction declined: ${verdict}`,
+          transferData.fraud_reason || transferData.message || "Transaction blocked due to high fraud risk.",
+        );
+      } else {
+        throw new Error(
+          transferData.message || transferData.fraud_reason || `Transaction declined: ${verdict}`,
         );
       }
     } catch (error: any) {

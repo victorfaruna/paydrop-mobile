@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "PayDrop",
-    "slug": "paydrop",
+    "slug": "paydrop-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -14,6 +14,7 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
+      "buildNumber": "8",
       "supportsTablet": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -28,9 +29,10 @@
           "bluetooth-peripheral"
         ]
       },
-      "bundleIdentifier": "com.victorfaruna1.paydrop"
+      "bundleIdentifier": "com.paydrop.paydrop"
     },
     "android": {
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -47,7 +49,7 @@
         "android.permission.BLUETOOTH",
         "android.permission.BLUETOOTH_ADMIN"
       ],
-      "package": "com.victorfaruna1.paydrop"
+      "package": "com.paydrop.paydrop"
     },
     "web": {
       "bundler": "metro",
@@ -55,15 +57,13 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "./plugins/withBleAdvertiser.js",
       "expo-router",
       [
         "react-native-ble-plx",
         {
           "isBackgroundEnabled": true,
-          "modes": [
-            "peripheral",
-            "central"
-          ],
+          "modes": ["peripheral", "central"],
           "bluetoothAlwaysPermission": "Allow PayDrop to use Bluetooth to find nearby users."
         }
       ],
@@ -85,9 +85,7 @@
       [
         "react-native-permissions",
         {
-          "iosPermissions": [
-            "Bluetooth"
-          ]
+          "iosPermissions": ["Bluetooth"]
         }
       ]
     ],
@@ -97,9 +95,8 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "973ef257-fb78-4d28-845a-4a27f142dfc7"
+        "projectId": "3675fd77-9901-4d22-ba8f-2f95f7f32ec4"
       }
-    },
-    "owner": "victorfaruna"
+    }
   }
 }

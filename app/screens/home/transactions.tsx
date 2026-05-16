@@ -1,6 +1,7 @@
 import FraudDetailModal from "@/components/sections/FraudDetailModal";
 import api from "@/services/api";
 import { useUserStore } from "@/store/userStore";
+import { koboToNaira } from "@/utils/currency";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -23,6 +24,7 @@ interface Transaction {
   fraud_verdict: string;
   createdAt: string;
   updatedAt: string;
+  direction?: string;
 }
 
 const FILTERS = ["All", "Sent", "Received"] as const;
@@ -42,7 +44,7 @@ export default function TransactionsScreen() {
   const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
   const [isFraudModalVisible, setIsFraudModalVisible] = useState(false);
 
-  const fetchTransactions = async (pageNumber = 0, append = false) => {
+  const fetchTransactions = async (pageNumber = 1, append = false) => {
     if (pageNumber === 0) {
       setLoading(true);
       setError(null);
@@ -60,7 +62,7 @@ export default function TransactionsScreen() {
       const response = await api.get("/transactions", {
         params: {
           page: pageNumber,
-          limit: 20,
+          limit: 10,
         },
       });
 
@@ -103,20 +105,18 @@ export default function TransactionsScreen() {
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((tx) => {
-      if (filter === "Sent") return tx.amount < 0;
-      if (filter === "Received") return tx.amount >= 0;
+      if (filter === "All") return true;
+      if (filter === "Sent") return tx.direction === "debit";
+      if (filter === "Received") return tx.direction === "credit";
       return true;
     });
   }, [transactions, filter]);
 
-  const formatNaira = (value: number) => {
-    return `₦${value.toLocaleString("en-NG")}`;
-  };
-
   const renderItem = ({ item }: { item: Transaction }) => {
-    const direction = item.amount >= 0 ? "up" : "down";
-    const amountLabel = `${item.amount >= 0 ? "+" : "-"}${formatNaira(
-      Math.abs(item.amount),
+    const isCredit = item.direction === "credit";
+    const direction = isCredit ? "up" : "down";
+    const amountLabel = `${isCredit ? "+" : "-"}${koboToNaira(
+      Math.abs(parseInt(item.amount as any))
     )}`;
     const date = new Date(item.createdAt).toLocaleDateString("en-NG", {
       month: "short",
@@ -133,17 +133,23 @@ export default function TransactionsScreen() {
         activeOpacity={0.7}
         className="bg-white rounded-3xl p-4 mb-3 border border-grey-100 shadow-sm"
       >
-        <View className="flex-row justify-between items-start mb-3">
-          <View>
-            <Text className="text-black font-clash-semibold text-base">
+        <View className="flex-row justify-between items-start mb-3 gap-3">
+          <View className="flex-1 min-w-0">
+            <Text
+              className="text-black font-clash-semibold text-base"
+              numberOfLines={2}
+            >
               {item.squad_ref}
             </Text>
-            <Text className="text-grey-500 font-clash-regular text-xs mt-1">
+            <Text
+              className="text-grey-500 font-clash-regular text-xs mt-1"
+              numberOfLines={2}
+            >
               {item.fraud_verdict.toUpperCase()} • {date}
             </Text>
           </View>
           <Text
-            className={`font-clash-semibold text-base ${direction === "up" ? "text-green-600" : "text-red-600"}`}
+            className={`font-clash-semibold text-base shrink-0 ${direction === "up" ? "text-green-600" : "text-red-600"}`}
           >
             {amountLabel}
           </Text>

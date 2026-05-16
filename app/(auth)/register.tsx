@@ -135,9 +135,10 @@ export default function PhoneScreen() {
                   placeholder="812 345 6789"
                   placeholderTextColor="#9CA3AF"
                   keyboardType="phone-pad"
+                  maxLength={10}
                   className="flex-1 h-full font-clash-regular text-black"
                   value={phone}
-                  onChangeText={setPhone}
+                  onChangeText={(text) => setPhone(text.replace(/\D/g, ""))}
                 />
               </View>
 

@@ -2,6 +2,7 @@ import FraudDetailModal from "@/components/sections/FraudDetailModal";
 import QRModal from "@/components/sections/QRModal";
 import { getMe, getTransactions } from "@/services/user";
 import { useUserStore } from "@/store/userStore";
+import { koboToNaira } from "@/utils/currency";
 import size from "@/utils/size";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -111,8 +112,7 @@ export default function HomeScreen() {
 
   const refreshing = isRefreshing || refetchingUser || refetchingTransactions;
   const error = userError || transactionsError;
-
-  const walletBalance = user?.wallet_balance ?? user?.balance ?? 0;
+  const walletBalance = user?.wallet?.balance ?? user?.balance ?? 0;
   const transactions: Transaction[] =
     transactionsData?.transactions ??
     transactionsData?.data?.transactions ??
@@ -157,7 +157,7 @@ export default function HomeScreen() {
             </Text>
             <View className="flex-row items-baseline">
               <Text className="text-white font-clash-bold text-4xl">
-                {formatNaira(walletBalance)}
+                {koboToNaira(walletBalance)}
               </Text>
             </View>
             <View className="bg-purple-600 px-4 py-1.5 rounded-full mt-4">
@@ -172,19 +172,19 @@ export default function HomeScreen() {
           <View className="flex-row mb-6 px-1 gap-4">
             <ActionItem
               icon="send-outline"
-              label="Send money"
+              label="Send"
               onPress={() => router.push("/screens/home/nearby")}
             />
             <ActionItem
+              icon="qr-code-outline"
+              label="Receive"
+              onPress={() => router.push("/screens/home/receive" as any)}
+            />
+            <ActionItem
               icon="add-outline"
-              label="Add money"
+              label="Top-up"
               onPress={() => router.push("/screens/home/topup")}
             />
-            {/* <ActionItem
-            icon="people-outline"
-            label="Nearby"
-            onPress={() => router.push("/screens/home/nearby")}
-          /> */}
           </View>
 
           <TouchableOpacity
@@ -192,7 +192,7 @@ export default function HomeScreen() {
             className="bg-white/10 rounded-3xl px-4 py-5"
           >
             <Text className="text-purple-100 font-clash-medium text-sm mb-2">
-              Virtual account
+              Account Number
             </Text>
             <Text className="text-white font-clash-semibold text-2xl">
               {user?.squad_virtual_account ?? ""}
@@ -310,7 +310,7 @@ function TransactionItem({
   onPress: () => void;
 }) {
   const direction = transaction.amount >= 0 ? "up" : "down";
-  const amountLabel = `${transaction.amount >= 0 ? "+" : "-"}${formatNaira(Math.abs(transaction.amount))}`;
+  const amountLabel = `${transaction.amount >= 0 ? "+" : "-"}${koboToNaira(Math.abs(transaction.amount))}`;
   const date = new Date(transaction.createdAt).toLocaleDateString("en-NG", {
     month: "short",
     day: "numeric",
@@ -325,11 +325,11 @@ function TransactionItem({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
-      className="bg-grey-50 rounded-2xl p-4 mb-3 border border-grey-100"
+      className="bg-grey-50 rounded-2xl p-4 mb-3 border border-grey-100 overflow-hidden"
     >
-      <View className="flex-row items-center justify-between mb-3">
-        <View className="flex-row items-center">
-          <View className="w-12 h-12 bg-white rounded-xl items-center justify-center mr-4">
+      <View className="flex-row items-start justify-between mb-3 gap-3">
+        <View className="flex-row items-start flex-1 min-w-0">
+          <View className="w-12 h-12 bg-white rounded-xl items-center justify-center mr-3 shrink-0">
             <Ionicons
               name={
                 direction === "up" ? "arrow-up-outline" : "arrow-down-outline"
@@ -338,32 +338,44 @@ function TransactionItem({
               color="#9CA3AF"
             />
           </View>
-          <View>
-            <Text className="text-black font-clash-semibold text-base">
+          <View className="flex-1 min-w-0">
+            <Text
+              className="text-black font-clash-semibold text-base"
+              numberOfLines={2}
+            >
               {transaction.squad_ref}
             </Text>
-            <Text className="text-grey-500 font-clash-regular text-xs mt-1">
+            <Text
+              className="text-grey-500 font-clash-regular text-xs mt-1"
+              numberOfLines={1}
+            >
               {transaction.status}
             </Text>
           </View>
         </View>
         <Text
-          className={`font-clash-semibold text-base ${direction === "up" ? "text-green-600" : "text-red-600"}`}
+          className={`font-clash-semibold text-base shrink-0 ${direction === "up" ? "text-green-600" : "text-red-600"}`}
         >
           {amountLabel}
         </Text>
       </View>
-      <Text className="text-grey-500 font-clash-regular text-sm mb-2">
-        {transaction.note}
-      </Text>
-      <View className="flex-row justify-between">
-        <Text className="text-grey-400 font-clash-regular text-xs">{date}</Text>
-        <Text className="text-grey-400 font-clash-regular text-xs">{time}</Text>
+      {transaction.note ? (
+        <Text
+          className="text-grey-500 font-clash-regular text-sm mb-2"
+          numberOfLines={2}
+        >
+          {transaction.note}
+        </Text>
+      ) : null}
+      <View className="flex-row justify-between gap-2">
+        <Text className="text-grey-400 font-clash-regular text-xs shrink">
+          {date}
+        </Text>
+        <Text className="text-grey-400 font-clash-regular text-xs shrink-0">
+          {time}
+        </Text>
       </View>
     </TouchableOpacity>
   );
 }
 
-function formatNaira(value: number) {
-  return `₦${value.toLocaleString("en-NG")}`;
-}

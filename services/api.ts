@@ -3,7 +3,7 @@ import axios from "axios";
 import { useUserStore } from "../store/userStore";
 
 const api = axios.create({
-  baseURL: process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000",
+  baseURL: process.env.EXPO_PUBLIC_API_URL || "https://pay-drop-backend.vercel.app/api/v1",
 });
 
 // For queuing failed requests while refreshing
