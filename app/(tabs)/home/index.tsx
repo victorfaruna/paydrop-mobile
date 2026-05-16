@@ -112,8 +112,7 @@ export default function HomeScreen() {
 
   const refreshing = isRefreshing || refetchingUser || refetchingTransactions;
   const error = userError || transactionsError;
-
-  const walletBalance = user?.wallet.balance ?? user?.balance ?? 0;
+  const walletBalance = user?.wallet?.balance ?? user?.balance ?? 0;
   const transactions: Transaction[] =
     transactionsData?.transactions ??
     transactionsData?.data?.transactions ??

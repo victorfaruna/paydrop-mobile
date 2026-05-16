@@ -24,6 +24,7 @@ interface Transaction {
   fraud_verdict: string;
   createdAt: string;
   updatedAt: string;
+  direction?: string;
 }
 
 const FILTERS = ["All", "Sent", "Received"] as const;
@@ -104,16 +105,18 @@ export default function TransactionsScreen() {
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((tx) => {
-      if (filter === "Sent") return tx.amount < 0;
-      if (filter === "Received") return tx.amount >= 0;
+      if (filter === "All") return true;
+      if (filter === "Sent") return tx.direction === "debit";
+      if (filter === "Received") return tx.direction === "credit";
       return true;
     });
   }, [transactions, filter]);
 
   const renderItem = ({ item }: { item: Transaction }) => {
-    const direction = item.amount >= 0 ? "up" : "down";
-    const amountLabel = `${item.amount >= 0 ? "+" : "-"}${koboToNaira(
-      Math.abs(item.amount),
+    const isCredit = item.direction === "credit";
+    const direction = isCredit ? "up" : "down";
+    const amountLabel = `${isCredit ? "+" : "-"}${koboToNaira(
+      Math.abs(parseInt(item.amount as any))
     )}`;
     const date = new Date(item.createdAt).toLocaleDateString("en-NG", {
       month: "short",
