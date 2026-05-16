@@ -15,13 +15,7 @@ import {
 } from "@/services/user";
 import * as Crypto from "expo-crypto";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  AppState,
-  AppStateStatus,
-  NativeModules,
-  PermissionsAndroid,
-  Platform,
-} from "react-native";
+import { AppState, AppStateStatus, PermissionsAndroid, Platform } from "react-native";
 import { BleManager } from "react-native-ble-plx";
 import {
   check,
@@ -30,59 +24,13 @@ import {
   request,
   RESULTS,
 } from "react-native-permissions";
-
-// Package exports NativeModules.BLEAdvertiser directly (no .default)
-const BLEAdvertiser: typeof NativeModules.BLEAdvertiser | null =
-  NativeModules.BLEAdvertiser ?? null;
-
-const waitForBleAdvertiserReady = async (timeoutMs = 5000) => {
-  if (!BLEAdvertiser?.getAdapterState) return;
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    try {
-      const state = await BLEAdvertiser.getAdapterState();
-      if (state === "STATE_ON") return;
-    } catch {
-      // Adapter still initializing
-    }
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-};
-
-const startNativeAdvertising = async (token: string) => {
-  if (!BLEAdvertiser?.broadcast) {
-    console.warn("[BLE] BLEAdvertiser native module not linked");
-    return false;
-  }
-
-  // iOS: setCompanyId only initializes CBPeripheralManager (company ID unused).
-  // Android: required manufacturer company ID before broadcast.
-  if (Platform.OS === "android" && BLEAdvertiser.setCompanyId) {
-    BLEAdvertiser.setCompanyId(0x004c);
-  } else if (Platform.OS === "ios" && BLEAdvertiser.setCompanyId) {
-    BLEAdvertiser.setCompanyId(0);
-    await waitForBleAdvertiserReady();
-  }
-
-  const options = {
-    advertiseMode: 2,
-    txPowerLevel: 3,
-    connectable: false,
-    includeDeviceName: false,
-  };
-
-  const maxAttempts = Platform.OS === "ios" ? 6 : 1;
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      await BLEAdvertiser.broadcast(token, [], options);
-      return true;
-    } catch (err) {
-      if (attempt === maxAttempts - 1) throw err;
-      await new Promise((resolve) => setTimeout(resolve, 400));
-    }
-  }
-  return false;
-};
+import {
+  bleAdvertisingErrorMessage,
+  getBleNativeStatus,
+  startDiscoveryAdvertising,
+  stopDiscoveryAdvertising,
+} from "@/utils/bleAdvertising";
+import { isValidBleServiceUuid, normalizeDiscoveryToken } from "@/utils/discoveryToken";
 
 // Singleton BleManager for scanning
 const bleManager = new BleManager();
@@ -103,13 +51,16 @@ export interface NearbyUser {
 
 export const useBLEDiscovery = (
   mode: "scan" | "advertise" | "both" = "both",
+  externalDiscoveryToken?: string | null,
 ) => {
   const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>([]);
   const [isScanning, setIsScanning] = useState(false);
   const [isAdvertising, setIsAdvertising] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const tokenRef = useRef<string>(Crypto.randomUUID());
+  const tokenRef = useRef<string>(
+    externalDiscoveryToken || Crypto.randomUUID(),
+  );
   const scannedTokensRef = useRef<Set<string>>(new Set());
   const nearbyUsersRef = useRef<Map<string, NearbyUser>>(new Map());
 
@@ -241,21 +192,19 @@ export const useBLEDiscovery = (
 
         // Broadcast token via BLE as a service UUID
         try {
-          const nativeStarted = await startNativeAdvertising(
-            tokenRef.current,
-          );
+          const bleToken = normalizeDiscoveryToken(tokenRef.current);
+          if (!isValidBleServiceUuid(bleToken)) {
+            console.warn("[BLE] Discovery token is not a valid BLE UUID:", bleToken);
+          }
+
+          const nativeStarted = await startDiscoveryAdvertising(bleToken);
           if (nativeStarted) {
-            console.log(
-              "[BLE] Advertising started with token:",
-              tokenRef.current,
-            );
+            console.log("[BLE] Advertising started with token:", bleToken);
             setIsAdvertising(true);
             setError(null);
           } else {
             setIsAdvertising(false);
-            setError(
-              "Bluetooth advertising is unavailable. Rebuild the app with native BLE support.",
-            );
+            setError(bleAdvertisingErrorMessage(getBleNativeStatus()));
           }
         } catch (err: any) {
           console.warn("[BLE] Advertising Failed", err);
@@ -332,7 +281,7 @@ export const useBLEDiscovery = (
       bleManager.stopDeviceScan();
       setIsScanning(false);
 
-      if (BLEAdvertiser) await BLEAdvertiser.stopBroadcast().catch(() => {});
+      await stopDiscoveryAdvertising();
       setIsAdvertising(false);
 
       await stopDiscoveryBroadcast().catch(() => {});
@@ -434,11 +383,24 @@ export const useBLEDiscovery = (
     }, 5000);
   }, []);
 
+  // Keep BLE broadcast token in sync with QR token from /discover/qr
+  useEffect(() => {
+    if (!externalDiscoveryToken) return;
+    if (tokenRef.current === externalDiscoveryToken) return;
+    tokenRef.current = externalDiscoveryToken;
+    if (
+      AppState.currentState === "active" &&
+      (mode === "advertise" || mode === "both")
+    ) {
+      startBLEOperations();
+    }
+  }, [externalDiscoveryToken, mode, startBLEOperations]);
+
   // ─── Lifecycle ────────────────────────────────────────────────
   useEffect(() => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
       if (nextAppState === "active") {
-        tokenRef.current = Crypto.randomUUID();
+        tokenRef.current = externalDiscoveryToken || Crypto.randomUUID();
         startBLEOperations();
         startTokenRefresh();
         startResolveBatching();

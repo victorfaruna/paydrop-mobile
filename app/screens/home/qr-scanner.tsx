@@ -1,5 +1,5 @@
-import { resolveDiscoveryTokens } from "@/services/user";
-import { useUserStore } from "@/store/userStore";
+import { resolveDiscoveryToken } from "@/services/user";
+import { extractDiscoveryToken } from "@/utils/discoveryToken";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "@tanstack/react-query";
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -8,7 +8,6 @@ import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Linking,
   StyleSheet,
   Text,
@@ -19,79 +18,127 @@ import {
 
 export default function QRScannerScreen() {
   const router = useRouter();
-  const accessToken = useUserStore((state) => state.accessToken);
   const [permission, requestPermission] = useCameraPermissions();
   const [manualCode, setManualCode] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [scanLocked, setScanLocked] = useState(false);
 
-  // Use a ref to prevent duplicate scans - more reliable than state
   const isProcessingRef = useRef(false);
 
   const handleOpenSettings = () => {
     Linking.openSettings();
   };
 
+  const resetScanner = () => {
+    isProcessingRef.current = false;
+    setScanLocked(false);
+  };
+
+  const resolveWithCandidates = async (raw: string) => {
+    const trimmed = raw.trim();
+    const extracted = extractDiscoveryToken(trimmed);
+    const candidates = [
+      trimmed,
+      ...(extracted && extracted !== trimmed ? [extracted] : []),
+    ];
+
+    let lastError: unknown;
+    for (const token of candidates) {
+      try {
+        return await resolveDiscoveryToken(token);
+      } catch (err) {
+        lastError = err;
+        console.warn("[QR Scanner] Resolve failed for:", token, err);
+      }
+    }
+    throw lastError ?? new Error("QR not recognised");
+  };
+
   const { mutate: resolveMutate, isPending: resolving } = useMutation({
-    mutationFn: (tokens: string[]) => resolveDiscoveryTokens(tokens),
-    onSuccess: (response: any, variables: string[]) => {
+    mutationFn: (raw: string) => resolveWithCandidates(raw),
+    onSuccess: (response: any, raw: string) => {
       let foundUser = null;
 
-      // Handle the { user: { ... } } response shape
       if (response && response.user && !Array.isArray(response.user)) {
         foundUser = response.user;
       } else {
         const users = Array.isArray(response)
           ? response
-          : response?.data || response?.users || response?.resolved || [];
+          : response?.data?.users ||
+            response?.data ||
+            response?.users ||
+            response?.resolved ||
+            [];
         if (users && users.length > 0) {
           foundUser = users[0];
         }
       }
 
       if (foundUser) {
-        const token = variables[0];
+        const token =
+          extractDiscoveryToken(raw) ?? raw.trim();
         router.push({
           pathname: "/screens/payment/recipient-preview" as any,
           params: { user: JSON.stringify(foundUser), token },
         });
-      } else {
-        console.error("User not found, response was:", response);
-        setError("User not found");
-        isProcessingRef.current = false;
-        setTimeout(() => setError(null), 3000);
+        return;
       }
+
+      console.error("User not found, response was:", response);
+      setError("User not found for this code");
+      resetScanner();
+      setTimeout(() => setError(null), 3000);
     },
     onError: (err: any) => {
       console.error("QR resolve error", err);
-      setError(err?.message || "QR not recognised");
-      isProcessingRef.current = false;
+      const message =
+        (typeof err === "string" && err) ||
+        err?.message ||
+        err?.error ||
+        (typeof err?.response?.data === "string" && err.response.data) ||
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        "QR not recognised";
+      setError(typeof message === "string" ? message : "QR not recognised");
+      resetScanner();
       setTimeout(() => setError(null), 3000);
     },
   });
 
+  const resolveRawCode = (raw: string) => {
+    const trimmed = raw?.trim();
+    if (!trimmed) {
+      setError("Invalid QR code");
+      resetScanner();
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    console.log("[QR Scanner] Resolving:", trimmed);
+    resolveMutate(trimmed);
+  };
+
   const handleBarCodeScanned = (scanResult: { type: string; data: string }) => {
-    // Guard: only process once
-    if (isProcessingRef.current) return;
+    if (isProcessingRef.current || scanLocked || resolving) return;
     isProcessingRef.current = true;
+    setScanLocked(true);
 
     console.log("[QR Scanner] Scanned!", scanResult.type, scanResult.data);
 
-    // Haptic feedback
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
       () => {},
     );
 
-    // Pass the exact scanned data as the token
-    resolveMutate([scanResult.data]);
+    resolveRawCode(scanResult.data);
   };
 
   const handleManualResolve = () => {
-    if (!manualCode || resolving) return;
+    if (!manualCode.trim() || resolving || scanLocked) return;
     isProcessingRef.current = true;
-    resolveMutate([manualCode]);
+    setScanLocked(true);
+    resolveRawCode(manualCode);
   };
 
-  // Loading state while permissions are being checked
   if (!permission) {
     return (
       <View style={styles.centered}>
@@ -100,7 +147,6 @@ export default function QRScannerScreen() {
     );
   }
 
-  // Permission not granted
   if (!permission.granted) {
     return (
       <View className="flex-1 bg-white px-10">
@@ -134,32 +180,26 @@ export default function QRScannerScreen() {
     );
   }
 
+  const canScan = !scanLocked && !resolving;
+
   return (
     <View style={styles.container}>
-      {/* Camera - takes up the full screen */}
       <CameraView
         style={StyleSheet.absoluteFillObject}
         facing="back"
-        onBarcodeScanned={handleBarCodeScanned}
+        onBarcodeScanned={canScan ? handleBarCodeScanned : undefined}
         barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
       />
 
-      {/* Overlay - uses pointerEvents="none" so it doesn't block the camera */}
       <View style={styles.overlay} pointerEvents="none">
-        {/* Scan Frame */}
         <View style={styles.scanFrame}>
-          {/* Top Left Corner */}
           <View style={[styles.corner, styles.topLeft]} />
-          {/* Top Right Corner */}
           <View style={[styles.corner, styles.topRight]} />
-          {/* Bottom Left Corner */}
           <View style={[styles.corner, styles.bottomLeft]} />
-          {/* Bottom Right Corner */}
           <View style={[styles.corner, styles.bottomRight]} />
         </View>
       </View>
 
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -174,7 +214,6 @@ export default function QRScannerScreen() {
         </View>
       </View>
 
-      {/* Resolving indicator */}
       {resolving && (
         <View style={styles.resolvingBanner}>
           <ActivityIndicator size="small" color="#FFFFFF" />
@@ -184,16 +223,14 @@ export default function QRScannerScreen() {
         </View>
       )}
 
-      {/* Error Toast */}
       {error && (
         <View style={styles.errorBanner}>
-          <Text className="text-white font-clash-bold text-[14px]">
+          <Text className="text-white font-clash-bold text-[14px] text-center">
             {error}
           </Text>
         </View>
       )}
 
-      {/* Fallback Manual Input */}
       <View style={styles.manualInput}>
         <Text className="text-[#6B7280] font-clash-medium text-[12px] mb-3 ml-1">
           Enter code manually
@@ -202,14 +239,15 @@ export default function QRScannerScreen() {
           <TextInput
             value={manualCode}
             onChangeText={setManualCode}
-            placeholder="e.g. PD-123-456"
+            placeholder="Paste code or token"
             placeholderTextColor="#9CA3AF"
             className="flex-1 text-[#1A1A1A] font-clash-regular text-[15px]"
-            autoCapitalize="characters"
+            autoCapitalize="none"
+            autoCorrect={false}
           />
           <TouchableOpacity
             onPress={handleManualResolve}
-            disabled={!manualCode || resolving}
+            disabled={!manualCode.trim() || resolving || scanLocked}
             className="ml-2 bg-purple-500 rounded-xl px-4 py-2"
           >
             {resolving ? (
@@ -307,6 +345,7 @@ const styles = StyleSheet.create({
     right: 24,
     backgroundColor: "#FF6B6B",
     paddingVertical: 16,
+    paddingHorizontal: 12,
     borderRadius: 16,
     alignItems: "center",
     elevation: 5,

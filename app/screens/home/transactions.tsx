@@ -133,17 +133,23 @@ export default function TransactionsScreen() {
         activeOpacity={0.7}
         className="bg-white rounded-3xl p-4 mb-3 border border-grey-100 shadow-sm"
       >
-        <View className="flex-row justify-between items-start mb-3">
-          <View>
-            <Text className="text-black font-clash-semibold text-base">
+        <View className="flex-row justify-between items-start mb-3 gap-3">
+          <View className="flex-1 min-w-0">
+            <Text
+              className="text-black font-clash-semibold text-base"
+              numberOfLines={2}
+            >
               {item.squad_ref}
             </Text>
-            <Text className="text-grey-500 font-clash-regular text-xs mt-1">
+            <Text
+              className="text-grey-500 font-clash-regular text-xs mt-1"
+              numberOfLines={2}
+            >
               {item.fraud_verdict.toUpperCase()} • {date}
             </Text>
           </View>
           <Text
-            className={`font-clash-semibold text-base ${direction === "up" ? "text-green-600" : "text-red-600"}`}
+            className={`font-clash-semibold text-base shrink-0 ${direction === "up" ? "text-green-600" : "text-red-600"}`}
           >
             {amountLabel}
           </Text>

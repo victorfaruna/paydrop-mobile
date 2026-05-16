@@ -1,5 +1,7 @@
+import PayDropQRCode from "@/components/sections/PayDropQRCode";
 import { getQrCode } from "@/services/user";
 import { useUserStore } from "@/store/userStore";
+import { getQrCodeValue } from "@/utils/qrPayload";
 import { useQuery } from "@tanstack/react-query";
 import React, { useEffect, useState } from "react";
 import {
@@ -11,8 +13,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import QRCode from "react-native-qrcode-svg";
-
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
@@ -41,15 +41,7 @@ export default function QRModal({ visible, onClose }: QRModalProps) {
     enabled: visible && !!accessToken,
   });
 
-  const qrPayload =
-    qrData?.qr ||
-    qrData?.data?.qr ||
-    qrData?.token ||
-    qrData?.data?.token ||
-    qrData?.payload ||
-    qrData?.data?.payload ||
-    (typeof qrData === "string" ? qrData : "") ||
-    (user?.username ? `paydrop:${user.username}` : "");
+  const qrPayload = getQrCodeValue(qrData) ?? "";
 
   useEffect(() => {
     if (visible) {
@@ -151,8 +143,8 @@ export default function QRModal({ visible, onClose }: QRModalProps) {
               {qrLoading ? (
                 <View
                   style={{
-                    width: 220,
-                    height: 220,
+                    width: 260,
+                    height: 260,
                     alignItems: "center",
                     justifyContent: "center",
                   }}
@@ -160,17 +152,12 @@ export default function QRModal({ visible, onClose }: QRModalProps) {
                   <ActivityIndicator size="large" color="#A855F7" />
                 </View>
               ) : qrPayload ? (
-                <QRCode
-                  value={qrPayload}
-                  size={220}
-                  backgroundColor="white"
-                  color="black"
-                />
+                <PayDropQRCode value={qrPayload} size={260} />
               ) : (
                 <View
                   style={{
-                    width: 220,
-                    height: 220,
+                    width: 260,
+                    height: 260,
                     alignItems: "center",
                     justifyContent: "center",
                   }}

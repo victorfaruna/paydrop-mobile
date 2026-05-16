@@ -325,11 +325,11 @@ function TransactionItem({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
-      className="bg-grey-50 rounded-2xl p-4 mb-3 border border-grey-100"
+      className="bg-grey-50 rounded-2xl p-4 mb-3 border border-grey-100 overflow-hidden"
     >
-      <View className="flex-row items-center justify-between mb-3">
-        <View className="flex-row items-center">
-          <View className="w-12 h-12 bg-white rounded-xl items-center justify-center mr-4">
+      <View className="flex-row items-start justify-between mb-3 gap-3">
+        <View className="flex-row items-start flex-1 min-w-0">
+          <View className="w-12 h-12 bg-white rounded-xl items-center justify-center mr-3 shrink-0">
             <Ionicons
               name={
                 direction === "up" ? "arrow-up-outline" : "arrow-down-outline"
@@ -338,27 +338,42 @@ function TransactionItem({
               color="#9CA3AF"
             />
           </View>
-          <View>
-            <Text className="text-black font-clash-semibold text-base">
+          <View className="flex-1 min-w-0">
+            <Text
+              className="text-black font-clash-semibold text-base"
+              numberOfLines={2}
+            >
               {transaction.squad_ref}
             </Text>
-            <Text className="text-grey-500 font-clash-regular text-xs mt-1">
+            <Text
+              className="text-grey-500 font-clash-regular text-xs mt-1"
+              numberOfLines={1}
+            >
               {transaction.status}
             </Text>
           </View>
         </View>
         <Text
-          className={`font-clash-semibold text-base ${direction === "up" ? "text-green-600" : "text-red-600"}`}
+          className={`font-clash-semibold text-base shrink-0 ${direction === "up" ? "text-green-600" : "text-red-600"}`}
         >
           {amountLabel}
         </Text>
       </View>
-      <Text className="text-grey-500 font-clash-regular text-sm mb-2">
-        {transaction.note}
-      </Text>
-      <View className="flex-row justify-between">
-        <Text className="text-grey-400 font-clash-regular text-xs">{date}</Text>
-        <Text className="text-grey-400 font-clash-regular text-xs">{time}</Text>
+      {transaction.note ? (
+        <Text
+          className="text-grey-500 font-clash-regular text-sm mb-2"
+          numberOfLines={2}
+        >
+          {transaction.note}
+        </Text>
+      ) : null}
+      <View className="flex-row justify-between gap-2">
+        <Text className="text-grey-400 font-clash-regular text-xs shrink">
+          {date}
+        </Text>
+        <Text className="text-grey-400 font-clash-regular text-xs shrink-0">
+          {time}
+        </Text>
       </View>
     </TouchableOpacity>
   );

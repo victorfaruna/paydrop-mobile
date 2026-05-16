@@ -1,7 +1,12 @@
 import ScreenView from "@/components/layout/ScreenView";
+import PayDropQRCode from "@/components/sections/PayDropQRCode";
 import { useBLEDiscovery } from "@/hooks/useBLEDiscovery";
 import { getQrCode } from "@/services/user";
 import { useUserStore } from "@/store/userStore";
+import {
+  getDiscoveryTokenFromQrResponse,
+  getQrCodeValue,
+} from "@/utils/qrPayload";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import * as Clipboard from "expo-clipboard";
@@ -16,7 +21,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import QRCode from "react-native-qrcode-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ReceiveScreen() {
@@ -25,9 +29,6 @@ export default function ReceiveScreen() {
   const user = useUserStore((state) => state.user);
   const accessToken = useUserStore((state) => state.accessToken);
   const insets = useSafeAreaInsets();
-
-  // Start BLE Advertising explicitly for this screen
-  const { isAdvertising, error: bleError } = useBLEDiscovery("advertise");
 
   const {
     data: qrData,
@@ -41,15 +42,14 @@ export default function ReceiveScreen() {
     enabled: !!accessToken,
   });
 
-  const qrPayload =
-    qrData?.qr ||
-    qrData?.data?.qr ||
-    qrData?.token ||
-    qrData?.data?.token ||
-    qrData?.payload ||
-    qrData?.data?.payload ||
-    (typeof qrData === "string" ? qrData : "") ||
-    (user?.username ? `paydrop:${user.username}` : "");
+  const discoveryToken = getDiscoveryTokenFromQrResponse(qrData);
+  const qrPayload = getQrCodeValue(qrData) ?? discoveryToken ?? "";
+
+  // Use the same token as the QR for BLE broadcast
+  const { isAdvertising, error: bleError } = useBLEDiscovery(
+    "advertise",
+    discoveryToken,
+  );
 
   useEffect(() => {
     if (qrData) {
@@ -134,8 +134,8 @@ export default function ReceiveScreen() {
             {qrLoading ? (
               <View
                 style={{
-                  width: 220,
-                  height: 220,
+                  width: 260,
+                  height: 260,
                   alignItems: "center",
                   justifyContent: "center",
                 }}
@@ -143,17 +143,12 @@ export default function ReceiveScreen() {
                 <ActivityIndicator size="large" color="#A855F7" />
               </View>
             ) : qrPayload ? (
-              <QRCode
-                value={qrPayload}
-                size={220}
-                backgroundColor="white"
-                color="black"
-              />
+              <PayDropQRCode value={qrPayload} size={260} />
             ) : (
               <View
                 style={{
-                  width: 220,
-                  height: 220,
+                  width: 260,
+                  height: 260,
                   alignItems: "center",
                   justifyContent: "center",
                 }}
