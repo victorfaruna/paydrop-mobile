@@ -97,7 +97,7 @@ export default function NearbyUsersScreen() {
   };
 
   const getTrustColor = (tier: string) => {
-    switch (tier) {
+    switch (tier?.toLowerCase()) {
       case "high":
         return "#00D68F";
       case "medium":
@@ -144,7 +144,7 @@ export default function NearbyUsersScreen() {
                   className="font-clash-medium text-[10px]"
                   style={{ color: getTrustColor(item.trust_tier) }}
                 >
-                  {item.trust_tier.toUpperCase()}
+                  {(item.trust_tier || "UNKNOWN").toUpperCase()}
                 </Text>
               </View>
             </View>
@@ -152,12 +152,16 @@ export default function NearbyUsersScreen() {
               @{item.username}
             </Text>
             <View className="flex-row items-center mt-1">
-              <Text className="text-[#6B7280] font-clash-medium text-[12px]">
-                👥 {item.mutual_trust}
-              </Text>
-              <Text className="text-purple-500 font-clash-medium text-[12px] ml-3">
-                📍 {item.presence}
-              </Text>
+              {item.mutual_trust ? (
+                <Text className="text-[#6B7280] font-clash-medium text-[12px]">
+                  👥 {item.mutual_trust}
+                </Text>
+              ) : null}
+              {(item.presence || item.distance_signal) ? (
+                <Text className="text-purple-500 font-clash-medium text-[12px] ml-3">
+                  📍 {item.presence || (item.distance_signal === "NEAR" ? "Nearby" : item.distance_signal)}
+                </Text>
+              ) : null}
             </View>
           </View>
         </View>

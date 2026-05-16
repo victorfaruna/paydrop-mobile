@@ -102,16 +102,26 @@ export default function RecipientPreviewScreen() {
               <ActivityIndicator size="small" color="#00D68F" />
             ) : (
               <>
-                <Text className="text-[#6B7280] font-clash-regular text-[14px] mb-1">
-                  {trustScore}% trust score
-                </Text>
-                <Text className="text-[#6B7280] font-clash-regular text-[13px] mb-1">
-                  👥 Trusted by {recipient.mutual_trust || "Shade + 12 others"}
-                </Text>
-                <Text className="text-[#6B7280] font-clash-regular text-[13px]">
-                  📍{" "}
-                  {recipient.presence || "Seen regularly at Faculty Building"}
-                </Text>
+                {trustScore > 0 && (
+                  <Text className="text-[#6B7280] font-clash-regular text-[14px] mb-1">
+                    {trustScore}% trust score
+                  </Text>
+                )}
+                {recipient.mutual_trust && (
+                  <Text className="text-[#6B7280] font-clash-regular text-[13px] mb-1">
+                    👥 Trusted by {recipient.mutual_trust}
+                  </Text>
+                )}
+                {recipient.presence && (
+                  <Text className="text-[#6B7280] font-clash-regular text-[13px]">
+                    📍 {recipient.presence}
+                  </Text>
+                )}
+                {recipient.distance_signal && !recipient.presence && (
+                  <Text className="text-[#6B7280] font-clash-regular text-[13px]">
+                    📍 {recipient.distance_signal === "NEAR" ? "Nearby" : recipient.distance_signal}
+                  </Text>
+                )}
               </>
             )}
           </View>

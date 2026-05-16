@@ -9,7 +9,7 @@ export const getMe = async () => {
   }
 };
 
-export const getTransactions = async (page = 0, limit = 10) => {
+export const getTransactions = async (page = 1, limit = 10) => {
   try {
     const response = await api.get("/transactions", {
       params: { page, limit },

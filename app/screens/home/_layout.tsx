@@ -25,6 +25,7 @@ export default function HomeScreensLayout() {
         }}
       />
       <Stack.Screen name="nearby" options={{ headerShown: false }} />
+      <Stack.Screen name="receive" options={{ headerShown: false }} />
       <Stack.Screen name="qr-scanner" options={{ headerShown: false }} />
 
     </Stack>

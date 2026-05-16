@@ -5,26 +5,27 @@ import { useMutation } from "@tanstack/react-query";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
+  Alert,
   Linking,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 
-const { width, height } = Dimensions.get("window");
-
 export default function QRScannerScreen() {
   const router = useRouter();
   const accessToken = useUserStore((state) => state.accessToken);
   const [permission, requestPermission] = useCameraPermissions();
-  const [scanned, setScanned] = useState(false);
   const [manualCode, setManualCode] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  // Use a ref to prevent duplicate scans - more reliable than state
+  const isProcessingRef = useRef(false);
 
   const handleOpenSettings = () => {
     Linking.openSettings();
@@ -32,43 +33,77 @@ export default function QRScannerScreen() {
 
   const { mutate: resolveMutate, isPending: resolving } = useMutation({
     mutationFn: (tokens: string[]) => resolveDiscoveryTokens(tokens),
-    onSuccess: (users: any[]) => {
-      if (users && users.length > 0) {
-        const user = users[0];
+    onSuccess: (response: any, variables: string[]) => {
+      let foundUser = null;
+
+      // Handle the { user: { ... } } response shape
+      if (response && response.user && !Array.isArray(response.user)) {
+        foundUser = response.user;
+      } else {
+        const users = Array.isArray(response)
+          ? response
+          : response?.data || response?.users || response?.resolved || [];
+        if (users && users.length > 0) {
+          foundUser = users[0];
+        }
+      }
+
+      if (foundUser) {
+        const token = variables[0];
         router.push({
           pathname: "/screens/payment/recipient-preview" as any,
-          params: { user: JSON.stringify(user) },
+          params: { user: JSON.stringify(foundUser), token },
         });
       } else {
+        console.error("User not found, response was:", response);
         setError("User not found");
-        setScanned(false);
+        isProcessingRef.current = false;
         setTimeout(() => setError(null), 3000);
       }
     },
     onError: (err: any) => {
       console.error("QR resolve error", err);
       setError(err?.message || "QR not recognised");
-      setScanned(false);
+      isProcessingRef.current = false;
       setTimeout(() => setError(null), 3000);
     },
   });
 
-  const handleBarCodeScanned = ({ data }: { data: string }) => {
-    if (scanned || resolving) return;
-    setScanned(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    resolveMutate([data]);
-  };
+  const handleBarCodeScanned = useCallback(
+    (scanResult: { type: string; data: string }) => {
+      // Guard: only process once
+      if (isProcessingRef.current || resolving) return;
+      isProcessingRef.current = true;
+
+      console.log("[QR Scanner] Scanned!", scanResult.type, scanResult.data);
+
+      // Haptic feedback
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+        () => {},
+      );
+
+      // Pass the exact scanned data as the token
+      resolveMutate([scanResult.data]);
+    },
+    [resolving, resolveMutate],
+  );
 
   const handleManualResolve = () => {
     if (!manualCode || resolving) return;
+    isProcessingRef.current = true;
     resolveMutate([manualCode]);
   };
 
+  // Loading state while permissions are being checked
   if (!permission) {
-    return <View className="flex-1 bg-white" />;
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#A855F7" />
+      </View>
+    );
   }
 
+  // Permission not granted
   if (!permission.granted) {
     return (
       <View className="flex-1 bg-white px-10">
@@ -103,38 +138,32 @@ export default function QRScannerScreen() {
   }
 
   return (
-    <View className="flex-1 bg-black">
-      {/* Camera */}
+    <View style={styles.container}>
+      {/* Camera - takes up the full screen */}
       <CameraView
-        style={{ flex: 1 }}
+        style={StyleSheet.absoluteFillObject}
         facing="back"
-        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+        onBarcodeScanned={handleBarCodeScanned}
         barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
       />
 
-      {/* Overlay */}
-      <View className="absolute inset-0 bg-black/40">
-        {/* Cutout Container */}
-        <View className="flex-1 items-center justify-center">
-          {/* Scan Frame */}
-          <View className="w-[240px] h-[240px] relative">
-            {/* Top Left Corner */}
-            <View className="absolute top-0 left-0 w-[24px] h-[24px] border-l-[3px] border-t-[3px] border-white" />
-            {/* Top Right Corner */}
-            <View className="absolute top-0 right-0 w-[24px] h-[24px] border-r-[3px] border-t-[3px] border-white" />
-            {/* Bottom Left Corner */}
-            <View className="absolute bottom-0 left-0 w-[24px] h-[24px] border-l-[3px] border-b-[3px] border-white" />
-            {/* Bottom Right Corner */}
-            <View className="absolute bottom-0 right-0 w-[24px] h-[24px] border-r-[3px] border-b-[3px] border-white" />
-
-            {/* Transparent Hole (conceptually) */}
-            <View className="flex-1" />
-          </View>
+      {/* Overlay - uses pointerEvents="none" so it doesn't block the camera */}
+      <View style={styles.overlay} pointerEvents="none">
+        {/* Scan Frame */}
+        <View style={styles.scanFrame}>
+          {/* Top Left Corner */}
+          <View style={[styles.corner, styles.topLeft]} />
+          {/* Top Right Corner */}
+          <View style={[styles.corner, styles.topRight]} />
+          {/* Bottom Left Corner */}
+          <View style={[styles.corner, styles.bottomLeft]} />
+          {/* Bottom Right Corner */}
+          <View style={[styles.corner, styles.bottomRight]} />
         </View>
       </View>
 
       {/* Header */}
-      <View className="absolute top-0 left-0 right-0 pt-[60px] pb-4 px-6 flex-row items-center">
+      <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
           className="w-10 h-10 bg-white/20 rounded-full items-center justify-center"
@@ -148,9 +177,19 @@ export default function QRScannerScreen() {
         </View>
       </View>
 
+      {/* Resolving indicator */}
+      {resolving && (
+        <View style={styles.resolvingBanner}>
+          <ActivityIndicator size="small" color="#FFFFFF" />
+          <Text className="text-white font-clash-medium text-[14px] ml-2">
+            Looking up user...
+          </Text>
+        </View>
+      )}
+
       {/* Error Toast */}
       {error && (
-        <View className="absolute top-[130px] left-6 right-6 bg-[#FF6B6B] py-4 rounded-2xl items-center shadow-lg">
+        <View style={styles.errorBanner}>
           <Text className="text-white font-clash-bold text-[14px]">
             {error}
           </Text>
@@ -158,7 +197,7 @@ export default function QRScannerScreen() {
       )}
 
       {/* Fallback Manual Input */}
-      <View className="absolute bottom-[40px] left-6 right-6 bg-white rounded-[24px] p-6 shadow-xl">
+      <View style={styles.manualInput}>
         <Text className="text-[#6B7280] font-clash-medium text-[12px] mb-3 ml-1">
           Enter code manually
         </Text>
@@ -189,3 +228,108 @@ export default function QRScannerScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#000",
+  },
+  centered: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scanFrame: {
+    width: 240,
+    height: 240,
+    position: "relative",
+  },
+  corner: {
+    position: "absolute",
+    width: 24,
+    height: 24,
+    borderColor: "#fff",
+  },
+  topLeft: {
+    top: 0,
+    left: 0,
+    borderLeftWidth: 3,
+    borderTopWidth: 3,
+  },
+  topRight: {
+    top: 0,
+    right: 0,
+    borderRightWidth: 3,
+    borderTopWidth: 3,
+  },
+  bottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderLeftWidth: 3,
+    borderBottomWidth: 3,
+  },
+  bottomRight: {
+    bottom: 0,
+    right: 0,
+    borderRightWidth: 3,
+    borderBottomWidth: 3,
+  },
+  header: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingTop: 60,
+    paddingBottom: 16,
+    paddingHorizontal: 24,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  resolvingBanner: {
+    position: "absolute",
+    top: 130,
+    left: 24,
+    right: 24,
+    backgroundColor: "#8B5CF6",
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+  },
+  errorBanner: {
+    position: "absolute",
+    top: 130,
+    left: 24,
+    right: 24,
+    backgroundColor: "#FF6B6B",
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  manualInput: {
+    position: "absolute",
+    bottom: 40,
+    left: 24,
+    right: 24,
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 24,
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -4 },
+  },
+});
