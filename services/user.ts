@@ -64,3 +64,12 @@ export const getFraudDetail = async (id: string) => {
     throw error.response?.data || error.message;
   }
 };
+
+export const getNotifications = async () => {
+  try {
+    const response = await api.get("/notifications");
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || error.message;
+  }
+};

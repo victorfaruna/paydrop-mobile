@@ -1,6 +1,7 @@
 import FraudDetailModal from "@/components/sections/FraudDetailModal";
 import api from "@/services/api";
 import { useUserStore } from "@/store/userStore";
+import { koboToNaira } from "@/utils/currency";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -42,7 +43,7 @@ export default function TransactionsScreen() {
   const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
   const [isFraudModalVisible, setIsFraudModalVisible] = useState(false);
 
-  const fetchTransactions = async (pageNumber = 0, append = false) => {
+  const fetchTransactions = async (pageNumber = 1, append = false) => {
     if (pageNumber === 0) {
       setLoading(true);
       setError(null);
@@ -60,7 +61,7 @@ export default function TransactionsScreen() {
       const response = await api.get("/transactions", {
         params: {
           page: pageNumber,
-          limit: 20,
+          limit: 10,
         },
       });
 
@@ -109,13 +110,9 @@ export default function TransactionsScreen() {
     });
   }, [transactions, filter]);
 
-  const formatNaira = (value: number) => {
-    return `₦${value.toLocaleString("en-NG")}`;
-  };
-
   const renderItem = ({ item }: { item: Transaction }) => {
     const direction = item.amount >= 0 ? "up" : "down";
-    const amountLabel = `${item.amount >= 0 ? "+" : "-"}${formatNaira(
+    const amountLabel = `${item.amount >= 0 ? "+" : "-"}${koboToNaira(
       Math.abs(item.amount),
     )}`;
     const date = new Date(item.createdAt).toLocaleDateString("en-NG", {

@@ -16,7 +16,6 @@ export default function PaymentConfirmScreen() {
     recipientAvatar: string;
     amount: string;
     note: string;
-    idempotencyKey: string;
   }>();
 
   const accessToken = useUserStore((state) => state.accessToken);
@@ -38,7 +37,6 @@ export default function PaymentConfirmScreen() {
       console.log("Initiating transfer...", {
         recipient_id: params.recipientId,
         amount: parseInt(params.amount),
-        idempotency_key: params.idempotencyKey,
         note: params.note,
         nip_code: "000013",
       });
@@ -46,7 +44,6 @@ export default function PaymentConfirmScreen() {
       const response = await api.post("/transactions/transfer", {
         recipient_id: params.recipientId,
         amount: parseInt(params.amount),
-        idempotency_key: params.idempotencyKey,
         note: params.note,
         nip_code: "000013",
       });

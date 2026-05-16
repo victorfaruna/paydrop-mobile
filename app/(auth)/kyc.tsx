@@ -1,7 +1,6 @@
 import ScreenView from "@/components/layout/ScreenView";
 import { requestOtp } from "@/services/auth";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { useMutation } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -32,17 +31,26 @@ export default function KYCScreen() {
   const email = getParam(params.email);
   const username = getParam(params.username);
 
-  const maxDate = new Date();
-  maxDate.setFullYear(maxDate.getFullYear() - 18);
-
   const [bvn, setBvn] = useState("");
-  const [date, setDate] = useState(maxDate);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [dobSet, setDobSet] = useState(false);
+  const [dob, setDob] = useState("");
 
-  const dob = dobSet ? date.toISOString().split("T")[0] : "";
+  const handleDobChange = (text: string) => {
+    // Remove all non-digits
+    const cleaned = text.replace(/\D/g, "");
+    
+    // Format as YYYY-MM-DD
+    let formatted = cleaned;
+    if (cleaned.length > 4) {
+      formatted = `${cleaned.slice(0, 4)}-${cleaned.slice(4)}`;
+    }
+    if (cleaned.length > 6) {
+      formatted = `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`;
+    }
+    
+    setDob(formatted);
+  };
 
-  const isFormValid = bvn.trim().length === 11 && dob !== "";
+  const isFormValid = bvn.trim().length === 11 && dob.length === 10;
 
   const { mutate, isPending, isError, isSuccess } = useMutation({
     mutationFn: async () => await requestOtp("signup", phone as string),
@@ -78,14 +86,6 @@ export default function KYCScreen() {
       alert("An error occurred");
     }
   }, [isError]);
-
-  const onDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === "ios");
-    if (selectedDate) {
-      setDate(selectedDate);
-      setDobSet(true);
-    }
-  };
 
   return (
     <ScreenView>
@@ -140,18 +140,17 @@ export default function KYCScreen() {
                 />
               </View>
 
-              <TouchableOpacity
-                className="bg-grey-50 h-16 rounded-xl flex-row items-center px-6 mb-4 border border-grey-200"
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Text
-                  className={`flex-1 font-clash-regular text-lg ${
-                    dobSet ? "text-black" : "text-grey-400"
-                  }`}
-                >
-                  {dobSet ? dob : "Date of Birth (YYYY-MM-DD)"}
-                </Text>
-              </TouchableOpacity>
+              <View className="bg-grey-50 h-16 rounded-xl flex-row items-center px-6 mb-4 border border-grey-200">
+                <TextInput
+                  placeholder="Date of Birth (YYYY-MM-DD)"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="number-pad"
+                  maxLength={10}
+                  className="flex-1 h-full font-clash-regular text-black"
+                  value={dob}
+                  onChangeText={handleDobChange}
+                />
+              </View>
 
               <TouchableOpacity
                 activeOpacity={0.6}
@@ -181,47 +180,7 @@ export default function KYCScreen() {
             </View>
           </ScrollView>
         </TouchableWithoutFeedback>
-
-        {showDatePicker && Platform.OS === "ios" && (
-          <Modal
-            transparent={true}
-            animationType="slide"
-            visible={showDatePicker}
-          >
-            <View className="flex-1 justify-end bg-black/30">
-              <View className="bg-white p-4 pb-8 rounded-t-3xl items-center">
-                <View className="flex-row w-full justify-between items-center mb-4 border-b border-grey-200 pb-4">
-                  <Text className="text-lg font-clash-medium text-black">
-                    Select Date
-                  </Text>
-                  <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                    <Text className="text-purple-500 font-clash-semibold text-lg">
-                      Done
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-                <DateTimePicker
-                  value={date}
-                  mode="date"
-                  display="spinner"
-                  onChange={onDateChange}
-                  maximumDate={maxDate}
-                  style={{ height: 250 }}
-                />
-              </View>
-            </View>
-          </Modal>
-        )}
       </KeyboardAvoidingView>
-      {showDatePicker && Platform.OS !== "ios" && (
-        <DateTimePicker
-          value={date}
-          mode="date"
-          display="default"
-          onChange={onDateChange}
-          maximumDate={maxDate}
-        />
-      )}
     </ScreenView>
   );
 }

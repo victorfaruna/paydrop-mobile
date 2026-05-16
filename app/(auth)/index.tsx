@@ -36,12 +36,16 @@ const slides = [
   },
 ];
 
+import { useAppState } from "@/store/appState";
+
 export default function OnboardingScreen() {
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
+  const { setHasSeenIntro } = useAppState();
 
   const handleStartAuth = () => {
+    setHasSeenIntro(true);
     router.replace("/(auth)/register");
   };
 

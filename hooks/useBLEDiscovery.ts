@@ -37,7 +37,7 @@ export interface NearbyUser {
   lastSeen: number;
 }
 
-export const useBLEDiscovery = () => {
+export const useBLEDiscovery = (mode: "scan" | "advertise" | "both" = "both") => {
   const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>([]);
   const [isScanning, setIsScanning] = useState(false);
   const [isAdvertising, setIsAdvertising] = useState(false);
@@ -112,58 +112,62 @@ export const useBLEDiscovery = () => {
         return;
       }
 
-      // 1. Register token with backend (with retry)
-      try {
-        await withRetry(() => broadcastDiscovery({ token: tokenRef.current }));
-      } catch (err) {
-        console.error("[Token Registration Failed]", err);
-        setError("Failed to register session token. Advertising disabled.");
-        return;
+      // 1. Register token with backend and Advertise (Peripheral mode)
+      if (mode === "advertise" || mode === "both") {
+        try {
+          await withRetry(() => broadcastDiscovery({ token: tokenRef.current }));
+        } catch (err) {
+          console.error("[Token Registration Failed]", err);
+          setError("Failed to register session token. Advertising disabled.");
+          return;
+        }
+
+        try {
+          await BLEAdvertiser.setCompanyId(0x004c); // Apple ID for local name support
+          await BLEAdvertiser.broadcast(tokenRef.current, [], {
+            advertiseMode: (BLEAdvertiser as any).ADVERTISE_MODE_LOW_LATENCY || 2,
+            txPowerLevel: (BLEAdvertiser as any).ADVERTISE_TX_POWER_HIGH || 3,
+            connectable: false,
+            includeDeviceName: false, // Fix payload size error on Android
+          });
+          setIsAdvertising(true);
+        } catch (err) {
+          console.warn("[Advertising Failed]", err);
+          // iOS background limitation might cause this, don't crash
+        }
       }
 
-      // 2. Start Advertising (Peripheral mode)
-      try {
-        await BLEAdvertiser.setCompanyId(0x004c); // Apple ID for local name support
-        await BLEAdvertiser.broadcast(tokenRef.current, [], {
-          advertiseMode: (BLEAdvertiser as any).ADVERTISE_MODE_LOW_LATENCY || 2,
-          txPowerLevel: (BLEAdvertiser as any).ADVERTISE_TX_POWER_HIGH || 3,
-          connectable: false,
-          includeDeviceName: true,
-        });
-        setIsAdvertising(true);
-      } catch (err) {
-        console.warn("[Advertising Failed]", err);
-        // iOS background limitation might cause this, don't crash
+      // 2. Start Scanning (Central mode)
+      if (mode === "scan" || mode === "both") {
+        bleManager.startDeviceScan(
+          null,
+          { allowDuplicates: true },
+          (error, device) => {
+            if (error) {
+              if (error.errorCode === 102) {
+                // BluetoothOff
+                setError("Bluetooth is turned off");
+              } else {
+                console.error("[BLE Scan Error]", error);
+              }
+              return;
+            }
+
+            if (device && device.localName) {
+              const potentialToken = device.localName;
+              // Most tokens will be 36 chars (UUID)
+              if (
+                potentialToken.length >= 32 &&
+                potentialToken !== tokenRef.current
+              ) {
+                scannedTokensRef.current.add(potentialToken);
+              }
+            }
+          },
+        );
+        setIsScanning(true);
       }
-
-      // 3. Start Scanning (Central mode)
-      bleManager.startDeviceScan(
-        null,
-        { allowDuplicates: true },
-        (error, device) => {
-          if (error) {
-            if (error.errorCode === 102) {
-              // BluetoothOff
-              setError("Bluetooth is turned off");
-            } else {
-              console.error("[BLE Scan Error]", error);
-            }
-            return;
-          }
-
-          if (device && device.localName) {
-            const potentialToken = device.localName;
-            // Most tokens will be 36 chars (UUID)
-            if (
-              potentialToken.length >= 32 &&
-              potentialToken !== tokenRef.current
-            ) {
-              scannedTokensRef.current.add(potentialToken);
-            }
-          }
-        },
-      );
-      setIsScanning(true);
+      
       setError(null);
     } catch (err: any) {
       console.error("[BLE Discovery Error]", err);
@@ -171,7 +175,7 @@ export const useBLEDiscovery = () => {
       setIsAdvertising(false);
       setIsScanning(false);
     }
-  }, []);
+  }, [mode]);
 
   const stopBLEOperations = useCallback(async () => {
     try {
@@ -187,8 +191,9 @@ export const useBLEDiscovery = () => {
     }
   }, []);
 
-  // Token refresh every 2.5 minutes
+  // Token refresh every 2.5 minutes (only if advertising)
   const startTokenRefresh = useCallback(() => {
+    if (mode !== "advertise" && mode !== "both") return;
     if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
     refreshIntervalRef.current = setInterval(async () => {
       try {
@@ -197,10 +202,11 @@ export const useBLEDiscovery = () => {
         console.error("[Token Refresh Error]", err);
       }
     }, 150000); // 2.5 minutes
-  }, []);
+  }, [mode]);
 
-  // Resolve tokens every 10 seconds
+  // Resolve tokens every 10 seconds (only if scanning)
   const startResolveBatching = useCallback(() => {
+    if (mode !== "scan" && mode !== "both") return;
     if (resolveIntervalRef.current) clearInterval(resolveIntervalRef.current);
     resolveIntervalRef.current = setInterval(async () => {
       const tokensToResolve = Array.from(scannedTokensRef.current);
@@ -228,7 +234,7 @@ export const useBLEDiscovery = () => {
         console.error("[Resolve Error]", err);
       }
     }, 10000); // 10 seconds
-  }, []);
+  }, [mode]);
 
   // Local TTL Cleanup every 5 seconds
   const startTTLCleanup = useCallback(() => {

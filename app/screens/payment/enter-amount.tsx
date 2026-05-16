@@ -5,14 +5,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { Image, Text, TextInput, TouchableOpacity, View } from "react-native";
 
-// Simple UUID generator fallback
-const generateUUID = () => {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    var r = (Math.random() * 16) | 0,
-      v = c == "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-};
 
 export default function EnterAmountScreen() {
   const router = useRouter();
@@ -24,7 +16,6 @@ export default function EnterAmountScreen() {
 
   const [amount, setAmount] = useState("0");
   const [note, setNote] = useState("");
-  const [idempotencyKey] = useState(() => generateUUID());
 
   const handleKeyPress = (key: string) => {
     if (key === "backspace") {
@@ -142,7 +133,6 @@ export default function EnterAmountScreen() {
                   recipientAvatar,
                   amount: amountInKobo,
                   note,
-                  idempotencyKey,
                 },
               })
             }

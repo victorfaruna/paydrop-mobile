@@ -2,6 +2,7 @@ import FraudDetailModal from "@/components/sections/FraudDetailModal";
 import QRModal from "@/components/sections/QRModal";
 import { getMe, getTransactions } from "@/services/user";
 import { useUserStore } from "@/store/userStore";
+import { koboToNaira } from "@/utils/currency";
 import size from "@/utils/size";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -112,7 +113,7 @@ export default function HomeScreen() {
   const refreshing = isRefreshing || refetchingUser || refetchingTransactions;
   const error = userError || transactionsError;
 
-  const walletBalance = user?.wallet_balance ?? user?.balance ?? 0;
+  const walletBalance = user?.wallet.balance ?? user?.balance ?? 0;
   const transactions: Transaction[] =
     transactionsData?.transactions ??
     transactionsData?.data?.transactions ??
@@ -157,7 +158,7 @@ export default function HomeScreen() {
             </Text>
             <View className="flex-row items-baseline">
               <Text className="text-white font-clash-bold text-4xl">
-                {formatNaira(walletBalance)}
+                {koboToNaira(walletBalance)}
               </Text>
             </View>
             <View className="bg-purple-600 px-4 py-1.5 rounded-full mt-4">
@@ -172,19 +173,19 @@ export default function HomeScreen() {
           <View className="flex-row mb-6 px-1 gap-4">
             <ActionItem
               icon="send-outline"
-              label="Send money"
+              label="Send"
               onPress={() => router.push("/screens/home/nearby")}
             />
             <ActionItem
+              icon="qr-code-outline"
+              label="Receive"
+              onPress={() => router.push("/screens/home/receive" as any)}
+            />
+            <ActionItem
               icon="add-outline"
-              label="Add money"
+              label="Top-up"
               onPress={() => router.push("/screens/home/topup")}
             />
-            {/* <ActionItem
-            icon="people-outline"
-            label="Nearby"
-            onPress={() => router.push("/screens/home/nearby")}
-          /> */}
           </View>
 
           <TouchableOpacity
@@ -192,7 +193,7 @@ export default function HomeScreen() {
             className="bg-white/10 rounded-3xl px-4 py-5"
           >
             <Text className="text-purple-100 font-clash-medium text-sm mb-2">
-              Virtual account
+              Account Number
             </Text>
             <Text className="text-white font-clash-semibold text-2xl">
               {user?.squad_virtual_account ?? ""}
@@ -310,7 +311,7 @@ function TransactionItem({
   onPress: () => void;
 }) {
   const direction = transaction.amount >= 0 ? "up" : "down";
-  const amountLabel = `${transaction.amount >= 0 ? "+" : "-"}${formatNaira(Math.abs(transaction.amount))}`;
+  const amountLabel = `${transaction.amount >= 0 ? "+" : "-"}${koboToNaira(Math.abs(transaction.amount))}`;
   const date = new Date(transaction.createdAt).toLocaleDateString("en-NG", {
     month: "short",
     day: "numeric",
@@ -364,6 +365,3 @@ function TransactionItem({
   );
 }
 
-function formatNaira(value: number) {
-  return `₦${value.toLocaleString("en-NG")}`;
-}
