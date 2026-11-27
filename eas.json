@@ -5,6 +5,7 @@
   },
   "build": {
     "development": {
+      "node": "22.14.0",
       "developmentClient": true,
       "distribution": "internal",
       "ios": {
@@ -16,10 +17,12 @@
       "channel": "development"
     },
     "preview": {
+      "node": "22.14.0",
       "distribution": "internal",
       "channel": "preview"
     },
     "production": {
+      "node": "22.14.0",
       "autoIncrement": true,
       "channel": "production"
     },
@@ -29,10 +32,26 @@
         "simulator": false
       },
       "channel": "development"
+    },
+    "testflight": {
+      "extends": "production",
+      "environment": "production",
+      "env": {
+        "APP_VARIANT": "fork",
+        "EXPO_OWNER": "oneboyfromife",
+        "EXPO_SLUG": "paydrop-mobile",
+        "EAS_PROJECT_ID": "3675fd77-9901-4d22-ba8f-2f95f7f32ec4",
+        "IOS_BUNDLE_ID": "com.paydrop.paydrop"
+      }
     }
   },
   "submit": {
     "production": {
+      "ios": {
+        "ascAppId": "6767659511"
+      }
+    },
+    "testflight": {
       "ios": {
         "ascAppId": "6767659511"
       }
